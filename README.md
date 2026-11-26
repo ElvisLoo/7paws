@@ -2,12 +2,13 @@
   <img src="assets/logo.png" alt="7paws" width="128" height="128" />
   <h1>7paws</h1>
   <p>Windows 3D 桌面小猫桌宠<br>全局键鼠响应 · 照片或 AI 定制专属猫咪 · 摸猫呼噜 · 点击穿透</p>
-  <p><a href="https://github.com/ElvisLoo/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/issues">反馈</a></p>
+  <p><a href="https://av72kx.nocode.host">介绍站</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/issues">反馈</a></p>
 </div>
 
-<p align="center">本仓库是 <a href="https://github.com/7wdn/7paws">7wdn/7paws</a> 的增强分支，由 <a href="https://github.com/ElvisLoo">ElvisLoo</a> 维护：在跟进上游的同时补充健壮性加固与新功能（托盘小憩/唤醒、状态气泡等），当前版本 v0.5.0。</p>
+<p align="center">本仓库是 <a href="https://github.com/7wdn/7paws">7wdn/7paws</a> 的增强分支，由 <a href="https://github.com/ElvisLoo">ElvisLoo</a> 维护：在跟进上游的同时补充健壮性加固与新功能（托盘小憩/唤醒、状态气泡等），当前版本 v0.5.0。项目单页介绍站：<a href="https://av72kx.nocode.host">https://av72kx.nocode.host</a></p>
 
 <div align="center">
+  <a href="https://av72kx.nocode.host"><img src="https://img.shields.io/badge/website-av72kx.nocode.host-6a7a45?style=flat-square" alt="Website" /></a>
   <a href="https://github.com/ElvisLoo/7paws/releases"><img src="https://img.shields.io/github/v/release/ElvisLoo/7paws?include_prereleases&amp;style=flat-square" alt="Release" /></a>
   <a href="https://github.com/ElvisLoo/7paws"><img src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square" alt="Platforms" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" /></a>
