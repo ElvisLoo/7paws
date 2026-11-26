@@ -345,7 +345,9 @@ fn persist_position(hwnd: HWND) {
     let mut settings = state.settings.lock().unwrap();
     settings.x = Some(rect.left);
     settings.y = Some(rect.top);
-    save_settings(&settings);
+    if let Err(e) = save_settings(&settings) {
+        eprintln!("7paws: failed to persist settings: {e}");
+    }
 }
 
 fn emit_pointer(app: &AppHandle, kind: &str, x: i32, y: i32, button: i32) {

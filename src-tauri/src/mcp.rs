@@ -171,6 +171,8 @@ fn execute_tool(name: &str, args: &Value) -> Value {
     match name {
         "list_cats" => {
             let settings = config::load_settings();
+            // A corrupt store must not look like "no custom cats".
+            let readable = cats::try_load_custom_cats().is_some();
             let custom = cats::load_custom_cats();
             let builtin: Vec<Value> = BUILTIN
                 .iter()
@@ -179,6 +181,7 @@ fn execute_tool(name: &str, args: &Value) -> Value {
             ok_text(json!({
                 "activeCatId": settings.coat,
                 "storagePath": cats::cats_path().to_string_lossy(),
+                "storageHealthy": readable,
                 "builtin": builtin,
                 "custom": custom
             }))
@@ -192,19 +195,47 @@ fn execute_tool(name: &str, args: &Value) -> Value {
                 Ok(cat) => cat,
                 Err(e) => return err_text(&format!("Invalid cat JSON: {e}")),
             };
-            let mut list = cats::load_custom_cats();
+            // Never overwrite an unreadable store with a fresh list.
+            let mut list = match cats::try_load_custom_cats() {
+                Some(list) => list,
+                None => {
+                    return err_text(
+                        "cats.json exists but cannot be read (corrupt or unreadable); refusing to overwrite it. Restore the file and retry.",
+                    )
+                }
+            };
             if cat.id.trim().is_empty() {
                 cat.id = cats::unique_cat_id(&cat.name, &list);
             }
-            let saved = cats::upsert_custom_cat(&mut list, cat);
+            let saved = match cats::upsert_custom_cat(&mut list, cat) {
+                Ok(saved) => saved,
+                Err(e) => return err_text(&format!("Failed to save cats.json: {e}")),
+            };
             let activate = args
                 .get("activate")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(true);
             if activate {
-                let mut settings = config::load_settings();
+                let mut settings = match config::try_load_settings() {
+                    Some(settings) => settings,
+                    None => {
+                        return ok_text(json!({
+                            "status": "saved",
+                            "activated": false,
+                            "cat": saved,
+                            "warning": "settings.json is unreadable; the cat was saved but not activated."
+                        }))
+                    }
+                };
                 settings.coat = saved.id.clone();
-                config::save_settings(&settings);
+                if let Err(e) = config::save_settings(&settings) {
+                    return ok_text(json!({
+                        "status": "saved",
+                        "activated": false,
+                        "cat": saved,
+                        "warning": format!("The cat was saved but could not be activated: {e}")
+                    }));
+                }
             }
             ok_text(json!({ "status": "saved", "activated": activate, "cat": saved }))
         }
@@ -218,9 +249,18 @@ fn execute_tool(name: &str, args: &Value) -> Value {
             if !ids.contains(&id) {
                 return err_text(&format!("Cat '{id}' not found. Available ids: {ids:?}"));
             }
-            let mut settings = config::load_settings();
+            let mut settings = match config::try_load_settings() {
+                Some(settings) => settings,
+                None => {
+                    return err_text(
+                        "settings.json exists but cannot be read (corrupt or unreadable); refusing to overwrite it. Restore the file and retry.",
+                    )
+                }
+            };
             settings.coat = id.clone();
-            config::save_settings(&settings);
+            if let Err(e) = config::save_settings(&settings) {
+                return err_text(&format!("Failed to save settings.json: {e}"));
+            }
             ok_text(json!({ "status": "switched", "activeCatId": id }))
         }
         "delete_cat" => {
@@ -231,14 +271,30 @@ fn execute_tool(name: &str, args: &Value) -> Value {
             if cats::is_builtin_coat(&id) {
                 return err_text(&format!("'{id}' is a built-in cat and cannot be deleted."));
             }
-            let mut list = cats::load_custom_cats();
-            if !cats::delete_custom_cat(&mut list, &id) {
-                return err_text(&format!("No custom cat with id '{id}'."));
+            let mut list = match cats::try_load_custom_cats() {
+                Some(list) => list,
+                None => {
+                    return err_text(
+                        "cats.json exists but cannot be read (corrupt or unreadable); refusing to overwrite it. Restore the file and retry.",
+                    )
+                }
+            };
+            match cats::delete_custom_cat(&mut list, &id) {
+                Ok(true) => {}
+                Ok(false) => return err_text(&format!("No custom cat with id '{id}'.")),
+                Err(e) => return err_text(&format!("Failed to save cats.json: {e}")),
             }
             let mut settings = config::load_settings();
             if settings.coat == id {
                 settings.coat = "tuxedo".to_string();
-                config::save_settings(&settings);
+                if let Err(e) = config::save_settings(&settings) {
+                    return ok_text(json!({
+                        "status": "deleted",
+                        "id": id,
+                        "activeCatId": settings.coat,
+                        "warning": format!("The cat was deleted but settings.json could not be updated: {e}")
+                    }));
+                }
             }
             ok_text(json!({ "status": "deleted", "id": id, "activeCatId": settings.coat }))
         }
@@ -246,7 +302,16 @@ fn execute_tool(name: &str, args: &Value) -> Value {
     }
 }
 
-fn handle_jsonrpc(request: &Value) -> Option<Value> {
+fn error_response(id: Value, code: i64, message: &str) -> Value {
+    json!({
+        "jsonrpc": "2.0",
+        "id": id,
+        "error": { "code": code, "message": message }
+    })
+}
+
+/// Handle one JSON-RPC message; notifications return `None`.
+fn handle_single(request: &Value) -> Option<Value> {
     let id = request.get("id").cloned();
     let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
     let params = request.get("params").cloned().unwrap_or_else(|| json!({}));
@@ -258,6 +323,7 @@ fn handle_jsonrpc(request: &Value) -> Option<Value> {
     let id = id.unwrap();
 
     let result = match method {
+        "" => Err((-32600, "Invalid Request: missing string 'method'.".to_string())),
         "initialize" => {
             let client_ver = params
                 .get("protocolVersion")
@@ -296,23 +362,57 @@ fn handle_jsonrpc(request: &Value) -> Option<Value> {
 
     Some(match result {
         Ok(res) => json!({ "jsonrpc": "2.0", "id": id, "result": res }),
-        Err((code, message)) => json!({
-            "jsonrpc": "2.0",
-            "id": id,
-            "error": { "code": code, "message": message }
-        }),
+        Err((code, message)) => error_response(id, code, &message),
     })
+}
+
+/// Dispatch a decoded JSON-RPC value: an object is one request, an array is a
+/// batch (responses keep input order; notifications produce nothing).
+fn handle_message(message: &Value) -> Vec<Value> {
+    match message {
+        Value::Array(items) => {
+            if items.is_empty() {
+                return vec![error_response(
+                    Value::Null,
+                    -32600,
+                    "Invalid Request: empty batch.",
+                )];
+            }
+            items.iter().filter_map(handle_single).collect()
+        }
+        Value::Object(_) => handle_single(message).into_iter().collect(),
+        _ => vec![error_response(
+            Value::Null,
+            -32600,
+            "Invalid Request: expected a JSON-RPC object or array.",
+        )],
+    }
 }
 
 /// `7paws.exe --mcp`: a zero-dependency stdio MCP server used by AI clients.
 /// It writes cats.json/settings.json directly; the running app watches those
 /// files, so edits reach the live pet without restarting anything.
 pub fn run_stdio() {
+    /// Refuse absurdly long lines before allocating/parsing them.
+    const MAX_LINE_BYTES: usize = 1 << 20;
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
     for line in stdin.lock().lines() {
         let Ok(line) = line else { break };
+        if line.len() > MAX_LINE_BYTES {
+            let _ = writeln!(
+                out,
+                "{}",
+                error_response(
+                    Value::Null,
+                    -32700,
+                    "Parse error: line exceeds the 1 MiB limit.",
+                )
+            );
+            let _ = out.flush();
+            continue;
+        }
         let line = line.trim();
         if line.is_empty() {
             continue;
@@ -323,19 +423,15 @@ pub fn run_stdio() {
                 let _ = writeln!(
                     out,
                     "{}",
-                    json!({
-                        "jsonrpc": "2.0",
-                        "id": Value::Null,
-                        "error": { "code": -32700, "message": format!("Parse error: {e}") }
-                    })
+                    error_response(Value::Null, -32700, &format!("Parse error: {e}"))
                 );
                 let _ = out.flush();
                 continue;
             }
         };
-        if let Some(response) = handle_jsonrpc(&parsed) {
+        for response in handle_message(&parsed) {
             let _ = writeln!(out, "{response}");
-            let _ = out.flush();
         }
+        let _ = out.flush();
     }
 }

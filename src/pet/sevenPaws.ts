@@ -35,6 +35,37 @@ declare global {
   }
 }
 
+// public/vendor/7paws.js is generated outside this repo, so verify the surface
+// we depend on instead of trusting that the bundle matches this interface.
+const REQUIRED_API_METHODS = [
+  "setInput",
+  "tap",
+  "setOptions",
+  "setCustomCoat",
+  "mouseMoved",
+  "mouseWheel",
+  "clear",
+  "state",
+  "idleAction",
+  "headSideAt",
+  "hitRegions",
+  "setPointerNdc",
+  "setMouseActive",
+  "nudgeMouse",
+  "setLayout",
+  "setAfterRender",
+  "captureFrame",
+  "destroy",
+] as const;
+
+function assertRendererApi(api: RefCatApi): void {
+  const record = api as unknown as Record<string, unknown>;
+  const missing = REQUIRED_API_METHODS.filter((name) => typeof record[name] !== "function");
+  if (missing.length > 0) {
+    throw new Error(`渲染器接口不完整，缺少方法：${missing.join("、")}`);
+  }
+}
+
 export class SevenPawsPet {
   private readonly api: RefCatApi;
   private readonly host: HTMLElement;
@@ -78,6 +109,7 @@ export class SevenPawsPet {
       onDebug: win7Mode ? (message) => this.logDebug(message) : undefined,
     });
     if (!api) throw new Error("Reference cat renderer failed to start");
+    assertRendererApi(api);
     this.api = api;
     this.host = host;
     this.settings = settings;

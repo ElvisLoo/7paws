@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
 
 pub const MIN_SCALE: f64 = 0.1;
 pub const MAX_SCALE: f64 = 1.5;
@@ -142,11 +143,67 @@ fn legacy_config_path() -> PathBuf {
     data_dir("cat-pet").join("settings.json")
 }
 
+/// Write bytes atomically: create a sibling temp file, write and flush it, then
+/// rename over the target. `fs::rename` replaces an existing destination on both
+/// Windows (`MoveFileExW` with replace) and POSIX, and because the temp file lives
+/// in the same directory a concurrent reader never sees a half-written file.
+pub(crate) fn write_file_atomic(path: &Path, contents: &[u8]) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let file_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "data.json".to_string());
+    let tmp = path.with_file_name(format!("{file_name}.tmp"));
+    let mut file = fs::File::create(&tmp)?;
+    file.write_all(contents)?;
+    // Durability is best effort: a sync failure must not discard data we just wrote.
+    let _ = file.sync_all();
+    drop(file);
+    match fs::rename(&tmp, path) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            let _ = fs::remove_file(&tmp);
+            Err(error)
+        }
+    }
+}
+
+/// Preserve an unreadable data file under a timestamped name so a later save
+/// cannot silently replace it with defaults. Never deletes user data.
+pub(crate) fn quarantine_corrupt(path: &Path) {
+    if !path.exists() {
+        return;
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "data.json".to_string());
+    let mut quarantined = path.to_path_buf();
+    quarantined.set_file_name(format!("{name}.corrupt-{stamp}"));
+    let _ = fs::rename(path, &quarantined);
+}
+
+/// `None` means the file exists but could not be parsed; callers should keep
+/// their current state (the corrupt file is preserved for inspection).
 pub fn try_load_settings() -> Option<AppSettings> {
-    let content = fs::read_to_string(config_path()).ok()?;
-    let mut parsed = serde_json::from_str::<AppSettings>(&content).ok()?;
-    parsed.normalize();
-    Some(parsed)
+    let path = config_path();
+    let content = fs::read_to_string(&path).ok()?;
+    match serde_json::from_str::<AppSettings>(&content) {
+        Ok(mut parsed) => {
+            parsed.normalize();
+            Some(parsed)
+        }
+        Err(_) => {
+            quarantine_corrupt(&path);
+            None
+        }
+    }
 }
 
 pub fn load_settings() -> AppSettings {
@@ -157,21 +214,16 @@ pub fn load_settings() -> AppSettings {
     if let Ok(content) = fs::read_to_string(legacy_config_path()) {
         if let Ok(mut parsed) = serde_json::from_str::<AppSettings>(&content) {
             parsed.normalize();
-            save_settings(&parsed);
+            let _ = save_settings(&parsed);
             return parsed;
         }
     }
     AppSettings::default()
 }
 
-pub fn save_settings(settings: &AppSettings) {
-    let path = config_path();
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    if let Ok(json) = serde_json::to_string_pretty(settings) {
-        let _ = fs::write(path, json);
-    }
+pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    write_file_atomic(&config_path(), json.as_bytes()).map_err(|e| e.to_string())
 }
 
 #[cfg(windows)]

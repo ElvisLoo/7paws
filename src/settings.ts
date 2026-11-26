@@ -65,6 +65,60 @@ const coatCodeImport = document.getElementById("coatCodeImport") as HTMLButtonEl
 const deleteCatBtn = document.getElementById("deleteCatBtn") as HTMLButtonElement;
 const colorSlotButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".color-slot"));
 
+// Every id the module-level casts above rely on. Boot verifies them so a
+// renamed/removed element fails loudly instead of crashing later.
+const REQUIRED_DOM_IDS = [
+  "menu",
+  "coats",
+  "scaleSlider",
+  "scaleValue",
+  "opacitySlider",
+  "opacityValue",
+  "sleepSelect",
+  "layoutSelect",
+  "leftMouse",
+  "alwaysOnTop",
+  "clickThroughLocked",
+  "showTrayIcon",
+  "autostart",
+  "runAsAdmin",
+  "privacyMode",
+  "purrPet",
+  "purrSleep",
+  "idleActions",
+  "showKeyLabels",
+  "reminderEnabled",
+  "reminderText",
+  "reminderInterval",
+  "mcpEnabled",
+  "mcpClientSelect",
+  "mcpCopyBtn",
+  "mcpLocation",
+  "updateBtn",
+  "githubBtn",
+  "appVersion",
+  "resetPosBtn",
+  "quitBtn",
+  "shortcutSection",
+  "createShortcutBtn",
+  "shortcutHint",
+  "gameSection",
+  "restartAdminBtn",
+  "gameHint",
+  "closeBtn",
+  "customCoat",
+  "patternSelect",
+  "photoBtn",
+  "photoInput",
+  "catName",
+  "spotsStatus",
+  "spotsClearBtn",
+  "coatCodeInput",
+  "coatCodeGen",
+  "coatCodeImport",
+  "deleteCatBtn",
+] as const;
+
 type ColorSlot = keyof Pick<CustomCat, "fur" | "patch" | "accent" | "eye" | "eye2">;
 
 let settings: AppSettings = { ...defaultSettings };
@@ -75,6 +129,60 @@ let appVersion = "dev";
 let reminderTextTimer: number | null = null;
 let reminderIntervalTimer: number | null = null;
 let photoPickerOpen = false;
+let noticeTimer: number | null = null;
+
+function missingDomIds(): string[] {
+  return REQUIRED_DOM_IDS.filter((id) => !document.getElementById(id));
+}
+
+function showFatal(message: string) {
+  let banner = document.getElementById("fatalBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "fatalBanner";
+    banner.className = "fatal-banner";
+    banner.setAttribute("role", "alert");
+    document.body.prepend(banner);
+  }
+  banner.textContent = message;
+  banner.classList.remove("hidden");
+}
+
+function hideFatal() {
+  document.getElementById("fatalBanner")?.classList.add("hidden");
+}
+
+/** Transient toast; sticky notices stay until replaced or dismissed. */
+function showNotice(message: string, sticky = false) {
+  let el = document.getElementById("noticeToast");
+  if (el) el.remove();
+  if (noticeTimer !== null) {
+    window.clearTimeout(noticeTimer);
+    noticeTimer = null;
+  }
+  el = document.createElement("div");
+  el.id = "noticeToast";
+  el.className = sticky ? "notice-toast sticky" : "notice-toast";
+  el.setAttribute("role", "status");
+  el.textContent = message;
+  document.body.appendChild(el);
+  if (!sticky) {
+    noticeTimer = window.setTimeout(() => {
+      noticeTimer = null;
+      el?.remove();
+    }, 4000);
+  }
+}
+
+function describeError(error: unknown): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error instanceof Error && error.message) return error.message;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
 
 function setPhotoPickerOpen(open: boolean) {
   if (photoPickerOpen === open) return;
@@ -770,6 +878,7 @@ function updateMenuScroll() {
 }
 
 async function saveSettings(patch: Partial<AppSettings>) {
+  const previous = settings;
   const next = { ...settings, ...patch };
   settings = next;
   syncControls();
@@ -778,14 +887,19 @@ async function saveSettings(patch: Partial<AppSettings>) {
     const saved = await invoke<AppSettings>("update_settings", { patch: next });
     settings = saved;
     syncControls();
-  } catch {
-    // Keep the local state; the next save retries.
+  } catch (error) {
+    // Roll back the optimistic state so the UI matches what was persisted.
+    settings = previous;
+    syncControls();
+    showNotice(`保存设置失败：${describeError(error)}`, true);
   }
 }
 
 async function saveActiveCat(patch: Partial<CustomCat>) {
   const cat = activeCat();
   if (!cat) return;
+  const previousCats = customCats;
+  const previousSettings = settings;
   const next: CustomCat = { ...cat, ...patch };
   const index = customCats.findIndex((c) => c.id === cat.id);
   if (index >= 0) customCats[index] = next;
@@ -798,8 +912,11 @@ async function saveActiveCat(patch: Partial<CustomCat>) {
     else customCats.push(saved);
     if (settings.coat !== saved.id) settings = { ...settings, coat: saved.id };
     syncControls();
-  } catch {
-    // Keep the local state; the next save retries.
+  } catch (error) {
+    customCats = previousCats;
+    settings = previousSettings;
+    syncControls();
+    showNotice(`保存自定义猫失败：${describeError(error)}`, true);
   }
 }
 
@@ -826,22 +943,34 @@ async function createCat() {
     if (!customCats.some((c) => c.id === saved.id)) customCats.push(saved);
     settings = { ...settings, coat: saved.id };
     syncControls();
-  } catch {
-    // Ignore; the user can retry.
+  } catch (error) {
+    showNotice(`创建失败：${describeError(error)}`, true);
   }
 }
 
 async function removeActiveCat() {
   const cat = activeCat();
   if (!cat) return;
+  const previousCats = customCats;
+  const previousSettings = settings;
   customCats = customCats.filter((c) => c.id !== cat.id);
   if (settings.coat === cat.id) settings = { ...settings, coat: "tuxedo" };
   syncControls();
   if (!isTauri) return;
   try {
-    await invoke("delete_custom_cat", { id: cat.id });
-  } catch {
-    // The list listener will reconcile.
+    const removed = await invoke<boolean>("delete_custom_cat", { id: cat.id });
+    if (!removed) {
+      customCats = previousCats;
+      settings = previousSettings;
+      syncControls();
+      showNotice("删除失败：后端已没有这只猫。", false);
+    }
+  } catch (error) {
+    // The list listener will reconcile; still restore the optimistic change.
+    customCats = previousCats;
+    settings = previousSettings;
+    syncControls();
+    showNotice(`删除失败：${describeError(error)}`, true);
   }
 }
 
@@ -851,6 +980,11 @@ function catFromCode(raw: string): CustomCat | null {
     if (!parsed || typeof parsed !== "object") return null;
     const str = (value: unknown, fallback: string) =>
       typeof value === "string" && value.trim() ? value : fallback;
+    const hex = (value: unknown, fallback: string) => {
+      const candidate = typeof value === "string" ? value.trim() : "";
+      return /^#[0-9a-fA-F]{6}$/.test(candidate) ? candidate : fallback;
+    };
+    const eye = hex(parsed.eye, "#e2b93b");
     const patternRaw = str(parsed.pattern, "bicolor");
     const pattern: CatPattern = (["solid", "bicolor", "tabby", "calico"] as const).includes(
       patternRaw as CatPattern,
@@ -860,11 +994,11 @@ function catFromCode(raw: string): CustomCat | null {
     return {
       id: "",
       name: str(parsed.name, "导入的猫").slice(0, 16),
-      fur: str(parsed.fur, "#151515"),
-      patch: str(parsed.patch, "#f8f6ef"),
-      accent: str(parsed.accent, "#e9973f"),
-      eye: str(parsed.eye, "#e2b93b"),
-      eye2: str(parsed.eye2, str(parsed.eye, "#e2b93b")),
+      fur: hex(parsed.fur, "#151515"),
+      patch: hex(parsed.patch, "#f8f6ef"),
+      accent: hex(parsed.accent, "#e9973f"),
+      eye,
+      eye2: hex(parsed.eye2, eye),
       pattern,
       spots: Array.isArray(parsed.spots) ? (parsed.spots.slice(0, 24) as CatSpot[]) : [],
     };
@@ -895,8 +1029,8 @@ async function importCoatCode() {
     if (!customCats.some((c) => c.id === saved.id)) customCats.push(saved);
     settings = { ...settings, coat: saved.id };
     syncControls();
-  } catch {
-    // Ignore; the user can retry.
+  } catch (error) {
+    showNotice(`导入失败：${describeError(error)}`, true);
   }
 }
 
@@ -1207,6 +1341,14 @@ function bindControls() {
 }
 
 async function boot() {
+  const missing = missingDomIds();
+  if (missing.length > 0) {
+    showFatal(
+      `设置页结构不完整，已停止启动。\n缺少元素：${missing.join("、")}\n请完全退出应用后重新启动；若仍失败请重新安装。`,
+    );
+    return;
+  }
+  hideFatal();
   let portable = false;
   if (isTauri && isWindows) {
     portable = await invoke<boolean>("is_portable_install").catch(() => false);
@@ -1230,6 +1372,9 @@ async function boot() {
     await listen<CustomCat[]>("cat-cats", (ev) => {
       customCats = ev.payload;
       syncControls();
+    });
+    await listen<string>("cat-storage-error", (ev) => {
+      showNotice(ev.payload || "本地数据保存失败。", true);
     });
   }
 

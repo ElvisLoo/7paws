@@ -412,7 +412,9 @@ fn start_position_watcher(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
             if s.x != Some(x) || s.y != Some(y) {
                 s.x = Some(x);
                 s.y = Some(y);
-                save_settings(&s);
+                if let Err(e) = save_settings(&s) {
+                    eprintln!("7paws: failed to persist window position: {e}");
+                }
             }
         }
     });
@@ -429,71 +431,87 @@ fn update_settings(
     state: State<'_, AppState>,
     mut patch: AppSettings,
 ) -> AppSettings {
-    let mut s = state.settings.lock().unwrap();
-    let prev_scale = s.scale;
-    let prev_layout = s.keyboard_layout.clone();
-    let prev_autostart = s.autostart;
+    // Keep the lock critical section to pure in-memory merges: filesystem writes,
+    // autostart registration and window resizing all happen after `drop(s)`.
+    let mut pending_autostart: Option<bool> = None;
+    let mut pending_resize: Option<(f64, String)> = None;
+    let mut ensure_visible = false;
 
-    patch.normalize();
-    s.scale = patch.scale;
-    s.opacity = patch.opacity;
-    s.always_on_top = patch.always_on_top;
-    s.click_through_locked = patch.click_through_locked;
-    s.purr_pet = patch.purr_pet;
-    s.purr_sleep = patch.purr_sleep;
-    s.autostart = patch.autostart;
-    s.privacy_mode = patch.privacy_mode;
-    s.left_mouse = patch.left_mouse;
-    s.coat = patch.coat;
-    if !cats::is_builtin_coat(&s.coat) {
-        let known = state
-            .custom_cats
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|c| c.id == s.coat);
-        if !known {
-            s.coat = "tuxedo".to_string();
+    {
+        let mut s = state.settings.lock().unwrap();
+        let prev_scale = s.scale;
+        let prev_layout = s.keyboard_layout.clone();
+        let prev_autostart = s.autostart;
+
+        patch.normalize();
+        s.scale = patch.scale;
+        s.opacity = patch.opacity;
+        s.always_on_top = patch.always_on_top;
+        s.click_through_locked = patch.click_through_locked;
+        s.purr_pet = patch.purr_pet;
+        s.purr_sleep = patch.purr_sleep;
+        s.autostart = patch.autostart;
+        s.privacy_mode = patch.privacy_mode;
+        s.left_mouse = patch.left_mouse;
+        s.coat = patch.coat;
+        if !cats::is_builtin_coat(&s.coat) {
+            let known = state
+                .custom_cats
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.id == s.coat);
+            if !known {
+                s.coat = "tuxedo".to_string();
+            }
         }
-    }
-    s.sleep_minutes = patch.sleep_minutes;
-    s.idle_actions = patch.idle_actions;
-    s.show_key_labels = patch.show_key_labels;
-    s.keyboard_layout = patch.keyboard_layout;
-    s.show_tray_icon = patch.show_tray_icon;
-    s.mcp_enabled = patch.mcp_enabled;
-    s.run_as_admin = patch.run_as_admin;
-    s.reminder_enabled = patch.reminder_enabled;
-    s.reminder_text = patch.reminder_text;
-    s.reminder_interval_minutes = patch.reminder_interval_minutes;
+        s.sleep_minutes = patch.sleep_minutes;
+        s.idle_actions = patch.idle_actions;
+        s.show_key_labels = patch.show_key_labels;
+        s.keyboard_layout = patch.keyboard_layout;
+        s.show_tray_icon = patch.show_tray_icon;
+        s.mcp_enabled = patch.mcp_enabled;
+        s.run_as_admin = patch.run_as_admin;
+        s.reminder_enabled = patch.reminder_enabled;
+        s.reminder_text = patch.reminder_text;
+        s.reminder_interval_minutes = patch.reminder_interval_minutes;
 
-    if prev_autostart != s.autostart {
-        let _ = set_autostart(s.autostart);
+        if prev_autostart != s.autostart {
+            pending_autostart = Some(s.autostart);
+        }
+        if (s.scale - prev_scale).abs() > 0.0005 || s.keyboard_layout != prev_layout {
+            pending_resize = Some((s.scale, s.keyboard_layout.clone()));
+        }
+        // Never leave the app with both the pet and the tray hidden.
+        ensure_visible = !s.show_tray_icon;
+    }
+
+    if let Some(enabled) = pending_autostart {
+        let _ = set_autostart(enabled);
     }
 
     if let Some(win) = app.get_webview_window("main") {
-        let _ = win.set_always_on_top(s.always_on_top);
+        let always_on_top = state.settings.lock().unwrap().always_on_top;
+        let _ = win.set_always_on_top(always_on_top);
         #[cfg(all(windows, feature = "win7"))]
-        win7::set_always_on_top(s.always_on_top);
-        if (s.scale - prev_scale).abs() > 0.0005 || s.keyboard_layout != prev_layout {
-            if let Some((x, y)) = resize_anchored_bottom_center(&win, &s.keyboard_layout, s.scale) {
+        win7::set_always_on_top(always_on_top);
+        if let Some((scale, layout)) = pending_resize {
+            if let Some((x, y)) = resize_anchored_bottom_center(&win, &layout, scale) {
+                let mut s = state.settings.lock().unwrap();
                 s.x = Some(x);
                 s.y = Some(y);
             }
         }
     }
 
-    // Never leave the app with both the pet and the tray hidden.
-    if !s.show_tray_icon {
-        if !main_window_is_visible(&app) {
-            set_main_window_visible(&app, true);
-        }
+    if ensure_visible && !main_window_is_visible(&app) {
+        set_main_window_visible(&app, true);
     }
 
-    save_settings(&s);
-    let out = s.clone();
-    drop(s);
-
+    let out = state.settings.lock().unwrap().clone();
+    if let Err(e) = save_settings(&out) {
+        eprintln!("7paws: failed to persist settings: {e}");
+    }
     let _ = app.emit("cat-settings", out.clone());
     out
 }
@@ -774,14 +792,31 @@ fn save_custom_cat(
     if cat.id.trim().is_empty() {
         cat.id = cats::unique_cat_id(&cat.name, &list);
     }
-    let saved = cats::upsert_custom_cat(&mut list, cat);
+    let requested = cat.clone();
+    let backup = list.clone();
+    let saved = match cats::upsert_custom_cat(&mut list, cat) {
+        Ok(saved) => saved,
+        Err(e) => {
+            // Keep memory consistent with disk when persistence fails.
+            *list = backup;
+            drop(list);
+            eprintln!("7paws: failed to persist custom cat: {e}");
+            let _ = app.emit(
+                "cat-storage-error",
+                format!("保存自定义猫失败：{e}"),
+            );
+            return requested;
+        }
+    };
     let snapshot = list.clone();
     drop(list);
 
     if activate {
         let mut s = state.settings.lock().unwrap();
         s.coat = saved.id.clone();
-        save_settings(&s);
+        if let Err(e) = save_settings(&s) {
+            eprintln!("7paws: failed to persist settings: {e}");
+        }
         let out = s.clone();
         drop(s);
         let _ = app.emit("cat-settings", out);
@@ -793,7 +828,18 @@ fn save_custom_cat(
 #[tauri::command]
 fn delete_custom_cat(app: AppHandle, state: State<'_, AppState>, id: String) -> bool {
     let mut list = state.custom_cats.lock().unwrap();
-    let removed = cats::delete_custom_cat(&mut list, &id);
+    let backup = list.clone();
+    let removed = match cats::delete_custom_cat(&mut list, &id) {
+        Ok(removed) => removed,
+        Err(e) => {
+            // Keep memory consistent with disk when persistence fails.
+            *list = backup;
+            drop(list);
+            eprintln!("7paws: failed to persist custom cats: {e}");
+            let _ = app.emit("cat-storage-error", format!("删除自定义猫失败：{e}"));
+            return false;
+        }
+    };
     let snapshot = list.clone();
     drop(list);
     if !removed {
@@ -803,7 +849,9 @@ fn delete_custom_cat(app: AppHandle, state: State<'_, AppState>, id: String) -> 
         let mut s = state.settings.lock().unwrap();
         if s.coat == id {
             s.coat = "tuxedo".to_string();
-            save_settings(&s);
+            if let Err(e) = save_settings(&s) {
+                eprintln!("7paws: failed to persist settings: {e}");
+            }
             Some(s.clone())
         } else {
             None
@@ -895,7 +943,9 @@ fn reset_position(app: AppHandle, state: State<'_, AppState>) {
         win7::set_position(pos.x, pos.y);
         s.x = Some(pos.x);
         s.y = Some(pos.y);
-        save_settings(&s);
+        if let Err(e) = save_settings(&s) {
+            eprintln!("7paws: failed to persist settings: {e}");
+        }
         let out = s.clone();
         drop(s);
         let _ = app.emit("cat-settings", out);
@@ -1004,8 +1054,13 @@ fn start_storage_watcher(
             thread::sleep(Duration::from_millis(400));
             let now_cats = file_mtime(&cats::cats_path());
             if now_cats != last_cats {
-                last_cats = now_cats;
-                if let Some(disk) = cats::try_load_custom_cats() {
+                let parsed = cats::try_load_custom_cats();
+                // Advance the latch only once the file is readable (or has been
+                // quarantined away); a transient read error retries next tick.
+                if !cats::cats_path().exists() || parsed.is_some() {
+                    last_cats = now_cats;
+                }
+                if let Some(disk) = parsed {
                     let changed = {
                         let mut current = custom_cats.lock().unwrap();
                         if *current == disk {
@@ -1022,7 +1077,9 @@ fn start_storage_watcher(
                                 && !disk.iter().any(|c| c.id == s.coat)
                             {
                                 s.coat = "tuxedo".to_string();
-                                save_settings(&s);
+                                if let Err(e) = save_settings(&s) {
+                                    eprintln!("7paws: failed to persist settings: {e}");
+                                }
                                 Some(s.clone())
                             } else {
                                 None
@@ -1037,8 +1094,13 @@ fn start_storage_watcher(
             }
             let now_settings = file_mtime(&config_path());
             if now_settings != last_settings {
-                last_settings = now_settings;
-                if let Some(mut disk) = try_load_settings() {
+                let parsed = try_load_settings();
+                // Advance the latch only once the file is readable (or has been
+                // quarantined away); a transient read error retries next tick.
+                if !config_path().exists() || parsed.is_some() {
+                    last_settings = now_settings;
+                }
+                if let Some(mut disk) = parsed {
                     let adopted = {
                         let mut s = settings.lock().unwrap();
                         if settings_equal_ignoring_position(&s, &disk) {
@@ -1159,7 +1221,9 @@ fn run_inner(_restarting: bool) {
             .any(|c| c.id == initial.coat)
     {
         initial.coat = "tuxedo".to_string();
-        save_settings(&initial);
+        if let Err(e) = save_settings(&initial) {
+            eprintln!("7paws: failed to persist settings: {e}");
+        }
     }
     let settings = Arc::new(Mutex::new(initial.clone()));
     let dragging = Arc::new(AtomicBool::new(false));

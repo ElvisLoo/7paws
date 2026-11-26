@@ -61,6 +61,48 @@ body {
   display: none;
 }
 
+/* Fatal startup errors (missing DOM, boot failure) stay until fixed. */
+.fatal-banner {
+  position: fixed;
+  z-index: 90;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-height: 45%;
+  overflow: auto;
+  padding: 8px 12px;
+  background: #b3261e;
+  color: #fff;
+  font: 12px/1.5 Consolas, "Courier New", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.fatal-banner.hidden {
+  display: none;
+}
+
+.notice-toast {
+  position: fixed;
+  z-index: 95;
+  left: 50%;
+  bottom: 16px;
+  max-width: min(420px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(25, 25, 23, 0.92);
+  color: #fffdf6;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.notice-toast.sticky {
+  background: #b3261e;
+}
+
 .menu {
   position: absolute;
   z-index: 20;

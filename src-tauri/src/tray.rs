@@ -85,7 +85,9 @@ pub fn setup_tray(app: &AppHandle, settings: Arc<Mutex<AppSettings>>) -> tauri::
                 let mut s = tray_settings.lock().unwrap();
                 s.click_through_locked = !s.click_through_locked;
                 let locked = s.click_through_locked;
-                save_settings(&s);
+                if let Err(e) = save_settings(&s) {
+                    eprintln!("7paws: failed to persist settings: {e}");
+                }
                 let out = s.clone();
                 drop(s);
                 let _ = event_lock.set_checked(locked);

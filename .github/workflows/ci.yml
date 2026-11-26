@@ -34,6 +34,8 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm check:coats
+      - run: pnpm test
       - run: pnpm build
 
   rust:
@@ -81,8 +83,11 @@ jobs:
       - run: cargo check --locked --target ${{ matrix.target }}
         working-directory: src-tauri
 
+      - run: cargo test --locked --target ${{ matrix.target }}
+        working-directory: src-tauri
+
   win7:
-    name: cargo check (Windows 7 x64 compatibility)
+    name: cargo check + test (Windows 7 x64 compatibility)
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -107,4 +112,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: cargo check --locked --features win7 --target-dir target-win7
+        working-directory: src-tauri
+
+      - run: cargo test --locked --features win7 --target-dir target-win7
         working-directory: src-tauri
