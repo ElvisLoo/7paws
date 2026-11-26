@@ -285,8 +285,9 @@ pub fn start_global_hooks(
 
 /// Debounced persistence plus change-only UI updates for the typing counters.
 /// Called on every hook message and on each idle tick so a quiet app still
-/// flushes within a few seconds of the last keypress.
-fn flush_typing_stats(
+/// flushes within a few seconds of the last keypress. Shared with the Windows
+/// compose watcher, which keeps its own debounce clocks.
+pub(crate) fn flush_typing_stats(
     app: &AppHandle,
     typing_stats: &Arc<Mutex<TypingStats>>,
     last_save: &mut Instant,

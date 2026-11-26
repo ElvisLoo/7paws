@@ -6,6 +6,12 @@ use std::path::{Path, PathBuf};
 pub const MIN_SCALE: f64 = 0.1;
 pub const MAX_SCALE: f64 = 1.5;
 
+/// Per-field default so installs upgrading from a version without this key
+/// still get the intended enabled-by-default behavior.
+fn default_true() -> bool {
+    true
+}
+
 pub(crate) const COATS: &[&str] = &[
     "tuxedo",
     "orange",
@@ -43,6 +49,11 @@ pub struct AppSettings {
     pub show_key_labels: bool,
     pub show_status_bubble: bool,
     pub typing_stats_enabled: bool,
+    /// Read committed text from the focused edit field (IME output, e.g.
+    /// Chinese) via UI Automation and show/count it. Windows only; silently off
+    /// elsewhere and while privacy mode is on.
+    #[serde(default = "default_true")]
+    pub compose_tracking_enabled: bool,
     pub keyboard_layout: String,
     pub show_tray_icon: bool,
     pub mcp_enabled: bool,
@@ -72,6 +83,7 @@ impl Default for AppSettings {
             show_key_labels: true,
             show_status_bubble: true,
             typing_stats_enabled: true,
+            compose_tracking_enabled: true,
             keyboard_layout: "65".to_string(),
             show_tray_icon: true,
             mcp_enabled: true,

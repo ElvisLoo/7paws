@@ -19,6 +19,9 @@ let scene: SevenPawsPet;
 let win7Mode = false;
 let statusBubble: HTMLDivElement | null = null;
 let typingBadge: HTMLDivElement | null = null;
+let composeBubble: HTMLDivElement | null = null;
+let composeText = "";
+let composeHideTimer: number | null = null;
 let typingStats: TypingStats | null = null;
 const reminder = new ReminderController();
 let lastReminderKey = "";
@@ -41,6 +44,31 @@ function syncTypingBadge() {
   if (!stats) return;
   const text = `⌨ 今日 ${stats.todayTotal.toLocaleString("zh-CN")}`;
   if (typingBadge.textContent !== text) typingBadge.textContent = text;
+}
+
+function hideComposed() {
+  composeText = "";
+  if (composeHideTimer !== null) {
+    window.clearTimeout(composeHideTimer);
+    composeHideTimer = null;
+  }
+  if (composeBubble) composeBubble.hidden = true;
+}
+
+/** Text committed by an IME into the focused field; appended while typing. */
+function showComposed(text: string) {
+  if (!composeBubble) return;
+  if (!settings.composeTrackingEnabled || settings.privacyMode) {
+    hideComposed();
+    return;
+  }
+  if (!text.trim()) return;
+  composeText += text;
+  const display = composeText.length > 48 ? `…${composeText.slice(-48)}` : composeText;
+  if (composeBubble.textContent !== display) composeBubble.textContent = display;
+  composeBubble.hidden = false;
+  if (composeHideTimer !== null) window.clearTimeout(composeHideTimer);
+  composeHideTimer = window.setTimeout(hideComposed, 3200);
 }
 
 function syncReminder() {
@@ -164,6 +192,11 @@ async function boot() {
       typingBadge.className = "typing-bubble";
       typingBadge.hidden = true;
       stage.appendChild(typingBadge);
+      composeBubble = document.createElement("div");
+      composeBubble.id = "composeBubble";
+      composeBubble.className = "compose-bubble";
+      composeBubble.hidden = true;
+      stage.appendChild(composeBubble);
     }
     scene = new SevenPawsPet(stage, settings, customCats, (regions) => {
       if (isTauri) void invoke("set_hit_regions", { regions });
@@ -217,12 +250,14 @@ async function boot() {
       scene.applySettings(settings, customCats);
       syncReminder();
       syncTypingBadge();
+      if (!settings.composeTrackingEnabled || settings.privacyMode) hideComposed();
       if (!settings.showStatusBubble && statusBubble) statusBubble.hidden = true;
     });
     await listen<TypingStats>("cat-typing-stats", (ev) => {
       typingStats = ev.payload;
       syncTypingBadge();
     });
+    await listen<{ text: string }>("cat-composed", (ev) => showComposed(ev.payload.text));
     await listen<string>("cat-sleep", (ev) => {
       if (ev.payload === "sleep") scene.nap();
       else if (ev.payload === "wake") scene.wake();

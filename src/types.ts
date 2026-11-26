@@ -42,6 +42,7 @@ export interface AppSettings {
   showKeyLabels: boolean;
   showStatusBubble: boolean;
   typingStatsEnabled: boolean;
+  composeTrackingEnabled: boolean;
   keyboardLayout: "65" | "104";
   showTrayIcon: boolean;
   mcpEnabled: boolean;
@@ -55,10 +56,12 @@ export interface TypingStats {
   letters: number;
   digits: number;
   functionKeys: number;
+  composed: number;
   todayTotal: number;
   todayLetters: number;
   todayDigits: number;
   todayFunctionKeys: number;
+  todayComposed: number;
   day: string;
 }
 

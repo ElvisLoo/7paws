@@ -109,6 +109,32 @@ body {
   display: none;
 }
 
+/* Committed text (IME output such as Chinese) shown above the pet's head. */
+.compose-bubble {
+  position: absolute;
+  z-index: 15;
+  bottom: 8px;
+  left: 50%;
+  max-width: calc(100% - 24px);
+  padding: 4px 12px;
+  border: 1px solid rgba(25, 25, 23, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 253, 246, 0.9);
+  color: #3a352c;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 3px 10px rgba(24, 20, 12, 0.14);
+  backdrop-filter: blur(6px);
+}
+
+.compose-bubble[hidden] {
+  display: none;
+}
+
 .typing-stats {
   display: grid;
   gap: 2px;

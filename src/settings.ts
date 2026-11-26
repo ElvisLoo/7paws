@@ -35,11 +35,14 @@ const reminderEnabledInput = document.getElementById("reminderEnabled") as HTMLI
 const reminderTextInput = document.getElementById("reminderText") as HTMLInputElement;
 const reminderIntervalInput = document.getElementById("reminderInterval") as HTMLInputElement;
 const typingStatsEnabledInput = document.getElementById("typingStatsEnabled") as HTMLInputElement;
+const composeTrackingEnabledInput = document.getElementById("composeTrackingEnabled") as HTMLInputElement;
 const typingTodayEl = document.getElementById("typingToday") as HTMLSpanElement;
 const typingTotalEl = document.getElementById("typingTotal") as HTMLSpanElement;
 const typingLettersEl = document.getElementById("typingLetters") as HTMLSpanElement;
 const typingDigitsEl = document.getElementById("typingDigits") as HTMLSpanElement;
 const typingFunctionKeysEl = document.getElementById("typingFunctionKeys") as HTMLSpanElement;
+const typingTodayComposedEl = document.getElementById("typingTodayComposed") as HTMLSpanElement;
+const typingTotalComposedEl = document.getElementById("typingTotalComposed") as HTMLSpanElement;
 const typingResetBtn = document.getElementById("typingResetBtn") as HTMLButtonElement;
 const mcpEnabledInput = document.getElementById("mcpEnabled") as HTMLInputElement;
 const mcpClientSelect = document.getElementById("mcpClientSelect") as HTMLButtonElement;
@@ -100,11 +103,14 @@ const REQUIRED_DOM_IDS = [
   "reminderText",
   "reminderInterval",
   "typingStatsEnabled",
+  "composeTrackingEnabled",
   "typingToday",
   "typingTotal",
   "typingLetters",
   "typingDigits",
   "typingFunctionKeys",
+  "typingTodayComposed",
+  "typingTotalComposed",
   "typingResetBtn",
   "mcpEnabled",
   "mcpClientSelect",
@@ -228,6 +234,8 @@ function renderTypingStats() {
   typingLettersEl.textContent = fmt(stats?.letters ?? 0);
   typingDigitsEl.textContent = fmt(stats?.digits ?? 0);
   typingFunctionKeysEl.textContent = fmt(stats?.functionKeys ?? 0);
+  typingTodayComposedEl.textContent = fmt(stats?.todayComposed ?? 0);
+  typingTotalComposedEl.textContent = fmt(stats?.composed ?? 0);
 }
 
 interface Choice {
@@ -910,6 +918,7 @@ function syncControls() {
   labelsInput.checked = settings.showKeyLabels;
   statusBubbleInput.checked = settings.showStatusBubble;
   typingStatsEnabledInput.checked = settings.typingStatsEnabled;
+  composeTrackingEnabledInput.checked = settings.composeTrackingEnabled;
   renderTypingStats();
   reminderEnabledInput.checked = settings.reminderEnabled;
   if (document.activeElement !== reminderTextInput) reminderTextInput.value = settings.reminderText;
@@ -1205,6 +1214,9 @@ function bindControls() {
   });
   typingStatsEnabledInput.addEventListener("change", () => {
     void saveSettings({ typingStatsEnabled: typingStatsEnabledInput.checked });
+  });
+  composeTrackingEnabledInput.addEventListener("change", () => {
+    void saveSettings({ composeTrackingEnabled: composeTrackingEnabledInput.checked });
   });
   typingResetBtn.addEventListener("click", async () => {
     if (typingArmedAt && Date.now() - typingArmedAt < 3000) {
