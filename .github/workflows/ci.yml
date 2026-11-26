@@ -83,7 +83,16 @@ jobs:
       - run: cargo check --locked --target ${{ matrix.target }}
         working-directory: src-tauri
 
-      - run: cargo test --locked --target ${{ matrix.target }}
+      # Cross-compiled Windows ARM64 binaries cannot execute on an x64 runner;
+      # build the test harness there and run tests natively elsewhere.
+      - name: cargo test (runs natively)
+        if: matrix.target != 'aarch64-pc-windows-msvc'
+        run: cargo test --locked --target ${{ matrix.target }}
+        working-directory: src-tauri
+
+      - name: cargo test --no-run (cross target)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        run: cargo test --locked --target ${{ matrix.target }} --no-run
         working-directory: src-tauri
 
   win7:
