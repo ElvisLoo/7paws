@@ -125,7 +125,7 @@ fn run(
 #[cfg(windows)]
 unsafe fn read_focused_text(automation: &IUIAutomation, max_chars: i32) -> Option<String> {
     let element: IUIAutomationElement = automation.GetFocusedElement().ok()?;
-    if element.CurrentIsPassword().unwrap_or_default() != 0 {
+    if element.CurrentIsPassword().unwrap_or_default().as_bool() {
         return None;
     }
 
