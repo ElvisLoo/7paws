@@ -17,8 +17,19 @@ let settings: AppSettings = { ...defaultSettings };
 let customCats: CustomCat[] = [];
 let scene: SevenPawsPet;
 let win7Mode = false;
+let statusBubble: HTMLDivElement | null = null;
 const reminder = new ReminderController();
 let lastReminderKey = "";
+
+function setStatusLabel(label: string | null) {
+  if (!statusBubble) return;
+  if (!settings.showStatusBubble || !label) {
+    statusBubble.hidden = true;
+    return;
+  }
+  if (statusBubble.textContent !== label) statusBubble.textContent = label;
+  statusBubble.hidden = false;
+}
 
 function syncReminder() {
   const key = `${settings.reminderEnabled}|${settings.reminderText}|${settings.reminderIntervalMinutes}`;
@@ -123,9 +134,18 @@ async function boot() {
   if (debugCoat && COATS.some((c) => c.id === debugCoat)) settings.coat = debugCoat;
 
   try {
+    if (!win7Mode) {
+      // Win7 presents frames through a separate layered window, so a DOM
+      // bubble would never be visible there.
+      statusBubble = document.createElement("div");
+      statusBubble.id = "statusBubble";
+      statusBubble.className = "status-bubble";
+      statusBubble.hidden = true;
+      stage.appendChild(statusBubble);
+    }
     scene = new SevenPawsPet(stage, settings, customCats, (regions) => {
       if (isTauri) void invoke("set_hit_regions", { regions });
-    }, win7Mode);
+    }, win7Mode, (label) => setStatusLabel(label));
   } catch (error) {
     if (isTauri) {
       void invoke("win7_debug_log", { message: `scene:init ${String(error)}` }).catch(() => undefined);
@@ -173,6 +193,11 @@ async function boot() {
       settings = ev.payload;
       scene.applySettings(settings, customCats);
       syncReminder();
+      if (!settings.showStatusBubble && statusBubble) statusBubble.hidden = true;
+    });
+    await listen<string>("cat-sleep", (ev) => {
+      if (ev.payload === "sleep") scene.nap();
+      else if (ev.payload === "wake") scene.wake();
     });
     await listen<CustomCat[]>("cat-cats", (ev) => {
       customCats = ev.payload;

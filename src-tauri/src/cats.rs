@@ -1,4 +1,4 @@
-use crate::config::{app_data_dir, is_hex_color, COATS};
+use crate::config::{app_data_dir, is_hex_color, quarantine_corrupt, write_file_atomic, COATS};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
@@ -86,6 +86,10 @@ impl Default for CustomCat {
     }
 }
 
+/// Reduce any raw string to a lowercase slug. Returns an empty string when the
+/// input contains no usable ASCII characters (e.g. a purely Chinese display
+/// name); callers must then derive a unique id from the display name instead of
+/// collapsing every such cat onto one shared id.
 pub fn sanitize_cat_id(raw: &str) -> String {
     let cleaned: String = raw
         .trim()
@@ -100,12 +104,7 @@ pub fn sanitize_cat_id(raw: &str) -> String {
         })
         .collect();
     let trimmed = cleaned.trim_matches('-').to_string();
-    let limited: String = trimmed.chars().take(32).collect();
-    if limited.is_empty() {
-        "my-cat".to_string()
-    } else {
-        limited
-    }
+    trimmed.chars().take(32).collect()
 }
 
 impl CustomCat {
@@ -162,12 +161,18 @@ pub fn try_load_custom_cats() -> Option<Vec<CustomCat>> {
         return Some(Vec::new());
     }
     let content = fs::read_to_string(&path).ok()?;
-    let parsed = serde_json::from_str::<Vec<CustomCat>>(&content).ok()?;
+    let parsed = match serde_json::from_str::<Vec<CustomCat>>(&content) {
+        Ok(parsed) => parsed,
+        Err(_) => {
+            quarantine_corrupt(&path);
+            return None;
+        }
+    };
     let mut seen = HashSet::new();
     let mut cats = Vec::new();
     for mut cat in parsed {
         cat.normalize();
-        if is_builtin_coat(&cat.id) || !seen.insert(cat.id.clone()) {
+        if cat.id.is_empty() || is_builtin_coat(&cat.id) || !seen.insert(cat.id.clone()) {
             continue;
         }
         cats.push(cat);
@@ -175,35 +180,43 @@ pub fn try_load_custom_cats() -> Option<Vec<CustomCat>> {
     Some(cats)
 }
 
-pub fn save_custom_cats(cats: &[CustomCat]) {
-    let path = cats_path();
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    if let Ok(json) = serde_json::to_string_pretty(cats) {
-        let _ = fs::write(path, json);
-    }
+pub fn save_custom_cats(cats: &[CustomCat]) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(cats).map_err(|e| e.to_string())?;
+    write_file_atomic(&cats_path(), json.as_bytes()).map_err(|e| e.to_string())
 }
 
 pub fn unique_cat_id(base: &str, cats: &[CustomCat]) -> String {
-    let base = sanitize_cat_id(base);
+    let sanitized = sanitize_cat_id(base);
+    // A display name without ASCII characters (Chinese-only names are common)
+    // still needs a stable stem; "cat" keeps generated ids readable and unique.
+    let base = if sanitized.is_empty() { "cat" } else { sanitized.as_str() };
     let free = |candidate: &str| -> bool {
         !is_builtin_coat(candidate) && !cats.iter().any(|c| c.id == candidate)
     };
-    if free(&base) {
-        return base;
+    if free(base) {
+        return base.to_string();
     }
-    for n in 2..1000 {
+    for n in 2..10_000 {
         let candidate = format!("{base}-{n}");
         if free(&candidate) {
             return candidate;
         }
     }
-    "my-cat".to_string()
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    format!("{base}-{:x}", stamp)
 }
 
-pub fn upsert_custom_cat(cats: &mut Vec<CustomCat>, mut cat: CustomCat) -> CustomCat {
+pub fn upsert_custom_cat(
+    cats: &mut Vec<CustomCat>,
+    mut cat: CustomCat,
+) -> Result<CustomCat, String> {
     cat.normalize();
+    if cat.id.trim().is_empty() {
+        cat.id = unique_cat_id(&cat.name, cats);
+    }
     if is_builtin_coat(&cat.id) {
         cat.id = unique_cat_id(&format!("{}-custom", cat.id), cats);
     }
@@ -212,16 +225,16 @@ pub fn upsert_custom_cat(cats: &mut Vec<CustomCat>, mut cat: CustomCat) -> Custo
     } else {
         cats.push(cat.clone());
     }
-    save_custom_cats(cats);
-    cat
+    save_custom_cats(cats)?;
+    Ok(cat)
 }
 
-pub fn delete_custom_cat(cats: &mut Vec<CustomCat>, id: &str) -> bool {
+pub fn delete_custom_cat(cats: &mut Vec<CustomCat>, id: &str) -> Result<bool, String> {
     let before = cats.len();
     cats.retain(|c| c.id != id);
     if cats.len() == before {
-        return false;
+        return Ok(false);
     }
-    save_custom_cats(cats);
-    true
+    save_custom_cats(cats)?;
+    Ok(true)
 }

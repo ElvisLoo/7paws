@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { AppSettings, CatInput, CustomCat, PawSide } from "../types";
 import { catAudio } from "../audio";
 import { buildCoatPalette, type CoatPalette } from "./catPalette";
+import { describePetState } from "./statusLabels";
 
 type Region = [number, number, number, number];
 
@@ -23,6 +24,7 @@ interface RefCatApi {
   setLayout(layout: string): void;
   setAfterRender(callback: (() => void) | null): void;
   captureFrame(opacity: number): ImageData | null;
+  fastForwardToSleep(): void;
   destroy(): void;
 }
 
@@ -32,6 +34,38 @@ declare global {
       host: HTMLElement,
       options?: { coat?: string; sleepMinutes?: number; idleActions?: boolean; pixelRatio?: number; win7Capture?: boolean; manualRender?: boolean; onError?: (message: string) => void; onDebug?: (message: string) => void },
     ) => RefCatApi | null;
+  }
+}
+
+// public/vendor/7paws.js is generated outside this repo, so verify the surface
+// we depend on instead of trusting that the bundle matches this interface.
+const REQUIRED_API_METHODS = [
+  "setInput",
+  "tap",
+  "setOptions",
+  "setCustomCoat",
+  "mouseMoved",
+  "mouseWheel",
+  "clear",
+  "state",
+  "idleAction",
+  "headSideAt",
+  "hitRegions",
+  "setPointerNdc",
+  "setMouseActive",
+  "nudgeMouse",
+  "setLayout",
+  "setAfterRender",
+  "captureFrame",
+  "fastForwardToSleep",
+  "destroy",
+] as const;
+
+function assertRendererApi(api: RefCatApi): void {
+  const record = api as unknown as Record<string, unknown>;
+  const missing = REQUIRED_API_METHODS.filter((name) => typeof record[name] !== "function");
+  if (missing.length > 0) {
+    throw new Error(`渲染器接口不完整，缺少方法：${missing.join("、")}`);
   }
 }
 
@@ -57,6 +91,8 @@ export class SevenPawsPet {
   private lastFrameAt = 0;
   private debugCaptureLogged = false;
   private debugErrorLogged = false;
+  private onStatus?: (label: string | null) => void;
+  private lastStatusLabel: string | null = null;
 
   constructor(
     host: HTMLElement,
@@ -64,6 +100,7 @@ export class SevenPawsPet {
     cats: CustomCat[],
     onRegions: (regions: Region[]) => void,
     win7Mode = false,
+    onStatus?: (label: string | null) => void,
   ) {
     this.win7Mode = win7Mode;
     if (!window.createCat) throw new Error("Reference cat renderer is missing");
@@ -78,12 +115,14 @@ export class SevenPawsPet {
       onDebug: win7Mode ? (message) => this.logDebug(message) : undefined,
     });
     if (!api) throw new Error("Reference cat renderer failed to start");
+    assertRendererApi(api);
     this.api = api;
     this.host = host;
     this.settings = settings;
     this.cats = cats;
     this.layout = settings.keyboardLayout;
     this.onRegions = onRegions;
+    this.onStatus = onStatus;
 
     catAudio.setEnabled(settings.purrPet || settings.purrSleep);
     this.applyOptions(settings);
@@ -100,6 +139,7 @@ export class SevenPawsPet {
           : 0;
       catAudio.setPurrIntensity(target);
       this.syncRegions();
+      this.syncStatus(state);
     }, 180);
 
     this.refreshHitRegions();
@@ -166,6 +206,16 @@ export class SevenPawsPet {
     return side > 0 ? "R" : "L";
   }
 
+  /** Put the cat to sleep immediately, ignoring the idle timeout. */
+  nap() {
+    this.api.fastForwardToSleep();
+  }
+
+  /** Wake the cat and drop any keys/buttons still held down. */
+  wake() {
+    this.clearInput();
+  }
+
   applySettings(next: AppSettings, cats: CustomCat[]) {
     const prev = this.settings;
     this.settings = next;
@@ -205,6 +255,16 @@ export class SevenPawsPet {
     if (!force && key === this.regionsKey) return;
     this.regionsKey = key;
     this.onRegions(regions);
+  }
+
+  // The bubble only repaints when the label actually changes; while it is off
+  // (or Win7 presents frames outside the DOM) no renderer query happens.
+  private syncStatus(state: string) {
+    if (!this.onStatus || this.win7Mode) return;
+    const label = describePetState(state, this.api.idleAction());
+    if (label === this.lastStatusLabel) return;
+    this.lastStatusLabel = label;
+    this.onStatus(label);
   }
 
   hitRegions(): Region[] {

@@ -1,6 +1,6 @@
 [package]
 name = "seven-paws"
-version = "0.4.1"
+version = "0.5.0"
 description = "7paws desktop cat companion"
 authors = ["7paws"]
 license = "MIT"

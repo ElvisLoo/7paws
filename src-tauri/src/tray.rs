@@ -39,10 +39,14 @@ pub fn setup_tray(app: &AppHandle, settings: Arc<Mutex<AppSettings>>) -> tauri::
         None::<&str>,
     )?;
     let open_menu = MenuItem::with_id(app, "open_menu", "设置…", true, None::<&str>)?;
+    // Nap/wake are pure renderer commands; the frontend listens for the event
+    // and calls the bundled cat, so no extra plugin or command is needed.
+    let nap = MenuItem::with_id(app, "nap_cat", "小憩片刻", true, None::<&str>)?;
+    let wake = MenuItem::with_id(app, "wake_cat", "唤醒小猫", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
 
-    let menu = Menu::with_items(app, &[&show_pet, &lock_through, &open_menu, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&show_pet, &lock_through, &nap, &wake, &open_menu, &sep, &quit])?;
     let icon = Image::from_bytes(include_bytes!("../icons/tray-icon.png"))?;
 
     let sync_app = app.clone();
@@ -85,13 +89,21 @@ pub fn setup_tray(app: &AppHandle, settings: Arc<Mutex<AppSettings>>) -> tauri::
                 let mut s = tray_settings.lock().unwrap();
                 s.click_through_locked = !s.click_through_locked;
                 let locked = s.click_through_locked;
-                save_settings(&s);
+                if let Err(e) = save_settings(&s) {
+                    eprintln!("7paws: failed to persist settings: {e}");
+                }
                 let out = s.clone();
                 drop(s);
                 let _ = event_lock.set_checked(locked);
                 let _ = app.emit("cat-settings", out);
             }
             "open_menu" => crate::show_settings_window(app),
+            "nap_cat" => {
+                let _ = app.emit("cat-sleep", "sleep");
+            }
+            "wake_cat" => {
+                let _ = app.emit("cat-sleep", "wake");
+            }
             "quit" => app.exit(0),
             _ => {}
         })
