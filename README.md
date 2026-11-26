@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/logo.png" alt="7paws" width="128" height="128" />
   <h1>7paws</h1>
-  <p>Windows 与 macOS 的 3D 桌面小猫桌宠<br>全局键鼠响应 · 照片或 AI 定制专属猫咪 · 摸猫呼噜 · 点击穿透</p>
+  <p>Windows 3D 桌面小猫桌宠<br>全局键鼠响应 · 照片或 AI 定制专属猫咪 · 摸猫呼噜 · 点击穿透</p>
   <p><a href="https://github.com/ElvisLoo/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/issues">反馈</a></p>
 </div>
 
@@ -9,7 +9,7 @@
 
 <div align="center">
   <a href="https://github.com/ElvisLoo/7paws/releases"><img src="https://img.shields.io/github/v/release/ElvisLoo/7paws?include_prereleases&amp;style=flat-square" alt="Release" /></a>
-  <a href="https://github.com/ElvisLoo/7paws"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue?style=flat-square" alt="Platforms" /></a>
+  <a href="https://github.com/ElvisLoo/7paws"><img src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square" alt="Platforms" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" /></a>
   <a href="https://github.com/ElvisLoo/7paws/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ElvisLoo/7paws/ci.yml?branch=main&amp;style=flat-square" alt="CI" /></a>
 </div>
@@ -33,7 +33,6 @@
 
 - [功能特性](#功能特性)
 - [下载安装](#下载安装)
-- [macOS 首次打开](#macos-首次打开)
 - [Windows 安装](#windows-安装)
 - [使用](#使用)
 - [AI 助手接入（MCP）](#ai-助手接入mcp)
@@ -63,7 +62,7 @@
 
 ### 桌面
 
-- **点击穿透与始终置顶** — 透明区域不影响桌面操作；需要完全不挡鼠标时可在设置菜单或托盘里锁定穿透，按住 `Alt` 临时恢复鼠标操作。不想压在其他窗口上时可以关闭始终置顶。托盘或菜单栏图标可显示、隐藏小猫。
+- **点击穿透与始终置顶** — 透明区域不影响桌面操作；需要完全不挡鼠标时可在设置菜单或托盘里锁定穿透，按住 `Alt` 临时恢复鼠标操作。不想压在其他窗口上时可以关闭始终置顶。托盘图标可显示、隐藏小猫。
 - **全屏游戏置顶守卫** — Windows 10/11 无边框或全屏优化模式下持续恢复小猫置顶，不抢游戏焦点；独占式全屏和反作弊游戏不保证覆盖。关闭始终置顶后守卫不再生效。
 - **65% / 104 键盘** — 同一个安装包内运行时切换，默认 65% 紧凑布局。
 - **隐私模式** — 只保留左右手动作提示，不显示具体按键。
@@ -81,41 +80,10 @@
 | Windows x64 便携版 | `*-x64-portable.zip` | 解压后双击运行，无需安装；需要系统已安装 WebView2 Runtime |
 | Windows ARM64 便携版 | `*-arm64-portable.zip` | 同上 |
 | Windows 7 SP1 x64 兼容便携版 | `*-win7-x64-portable.zip` | 非官方兼容构建；内置 WebView2 109 固定运行时，解压后本地运行 |
-| macOS Intel | `*-x64.dmg` | Intel Mac |
-| macOS Apple Silicon | `*-aarch64.dmg` | Apple Silicon |
 
 每个 Release 附带 `SHA256SUMS.txt`，正文是该版本的更新日志。Windows 安装器跟随系统语言，内置简体中文和英文。历史改动见 [CHANGELOG.md](CHANGELOG.md)。
 
-当前发布包未签名、未公证。macOS 首次打开可能需要手动放行；Windows 未签名安装包可能触发 SmartScreen。
-
-## macOS 首次打开
-
-把对应架构的 `7paws.app` 拖入「应用程序」后：
-
-- 如果提示「无法验证开发者」或「已损坏」，在终端执行：
-
-```bash
-xattr -cr /Applications/7paws.app
-```
-
-- 打开「系统设置 → 隐私与安全性」，在 **辅助功能**（macOS 26/27 显示为「设备控制与数据访问」）和 **输入监控** 中勾选 7paws，然后完全退出应用再重新打开。
-- 只需要这两项权限，没有第三处。
-- Apple Silicon 使用 `aarch64` 包，Intel 使用 `x64` 包；不要在 DMG 或下载目录里直接运行。
-
-如果勾选后提示仍在：
-
-1. 从菜单栏彻底退出 7paws，确认没有残留进程；
-2. 确认应用位于 `/Applications`，且架构与机器一致；
-3. 清除隔离属性和旧授权：
-
-```bash
-xattr -cr /Applications/7paws.app
-tccutil reset All com.qoder.7paws
-```
-
-4. 在「辅助功能」和「输入监控」中用 **+** 重新添加 `/Applications/7paws.app`，打开两个开关；完全退出后重新启动。
-5. macOS 26/27 上如果开关已经打开、但启动时仍弹出「7paws 想控制此 Mac 并访问你的数据」：先把两个开关关掉再打开，让系统把授权重新绑定到当前构建，然后完全退出并重新启动。发布包使用 ad-hoc 签名，授权绑定到具体构建，升级后可能需要重新确认一次。
-6. 如果仍然无效，正式分发需要 Developer ID 签名与公证。
+当前发布包未签名。Windows 未签名安装包可能触发 SmartScreen，确认来自本仓库 Releases 后选择「更多信息 → 仍要运行」即可。
 
 ## Windows 安装
 
@@ -146,7 +114,7 @@ tccutil reset All com.qoder.7paws
 
 - 右键小猫打开设置窗口，窗口出现在猫的旁边，可拖动标题栏移动；点外部、按 `Esc` 或右上角关闭。
 - 按住猫头是摸猫；按住身体拖动窗口。
-- 托盘图标（macOS 为菜单栏图标）左键显示或隐藏小猫；菜单可切换锁定鼠标穿透、让小猫小憩或唤醒、打开设置或退出。
+- 托盘图标左键显示或隐藏小猫；菜单可切换锁定鼠标穿透、让小猫小憩或唤醒、打开设置或退出。
 - 设置菜单可切换毛色（含「我的猫」：新建、照片取色、毛色码导入导出、给两只眼睛分别配色的异瞳色槽，命名多只随意切换）、键盘布局、睡眠时间、鼠标左右手、始终置顶、锁定鼠标穿透、托盘图标、开机自启、隐私模式、呼噜开关、按键字母、状态气泡和定时语音提醒。
 - 「显示状态气泡」开启后，小猫头顶会显示当前状态（睡觉、被抚摸、玩鼠标）或正在做的动作（舔爪、揣手、伸懒腰等），空闲无动作时自动隐藏；从托盘「小憩片刻」可随时让它立刻入睡，「唤醒小猫」或任意输入会叫醒它。
 - 锁定鼠标穿透后整窗不接收鼠标操作，按住 `Alt` 可临时拖动或右键打开菜单。
@@ -259,15 +227,12 @@ tccutil reset All com.qoder.7paws
 配置文件位置：
 
 - Windows：`%APPDATA%\7paws\settings.json`
-- macOS：`~/Library/Application Support/7paws/settings.json`
-
-macOS 的开机自启通过 `~/Library/LaunchAgents/com.qoder.7paws.plist` 注册。
 
 ## 技术栈
 
 - **桌面壳** — Tauri 2 + Rust；全局键鼠钩子、窗口、托盘、点击穿透和设置持久化。
 - **前端** — TypeScript + Vite，无 UI 框架；three.js + WebGL 渲染 3D 小猫。
-- **输入** — Windows 低级键鼠钩子；macOS CGEventTap（辅助功能 + 输入监控）。
+- **输入** — Windows 低级键鼠钩子。
 - **音频** — WebAudio 播放内置呼噜录音，无网络音频资源；没有网络请求、账号或遥测。
 
 ## 从源码构建
@@ -284,10 +249,6 @@ pnpm tauri:dev
 # Windows x64 NSIS
 pnpm tauri:build
 
-# macOS Intel / Apple Silicon
-pnpm tauri build --target x86_64-apple-darwin
-pnpm tauri build --target aarch64-apple-darwin
-
 # Windows ARM64（在 Windows 上交叉编译）
 pnpm tauri build --target aarch64-pc-windows-msvc --bundles nsis
 
@@ -296,7 +257,7 @@ pnpm tauri:win7
 pnpm verify:win7
 ```
 
-macOS 安装包必须在 macOS 上构建，Tauri 不支持从 Windows 交叉编译。按架构构建的产物位于 `src-tauri/target/<target>/release/bundle/`。
+构建产物位于 `src-tauri/target/<target>/release/bundle/`。
 
 Rust 代码检查：
 
@@ -338,14 +299,13 @@ pnpm dev
 - 7paws 读取全局键盘和鼠标输入只是为了驱动小猫动作；不记录、不保存、不上传按键内容。
 - 隐私模式只发送左右手动作提示，不显示具体按键。
 - 设置只写入本地文件；没有账号、遥测或分析。唯一的联网行为是用户在设置窗口点击「检查更新」时访问 GitHub Releases API：只读取最新版本号，不发送任何本地数据，也不自动检查。
-- 配置路径：Windows 为 `%APPDATA%\7paws\settings.json`，macOS 为 `~/Library/Application Support/7paws/settings.json`。
+- 配置路径：Windows 为 `%APPDATA%\7paws\settings.json`。
 
 ## 当前范围
 
-- 正式支持 Windows 10/11 x64 与 ARM64，macOS 10.15+ Intel 与 Apple Silicon。
-- Windows 7 SP1 x64 提供非官方兼容便携版；Windows 8 与 Linux 暂未支持，后续版本优先考虑 X11 会话。
-- macOS 以菜单栏图标驻留，不显示 Dock 图标。
-- 发布包目前未签名；macOS 26/27 上如果权限无法保持，需要 Developer ID 签名与公证。
+- 正式支持 Windows 10/11 x64 与 ARM64。
+- Windows 7 SP1 x64 提供非官方兼容便携版；Windows 8 与 Linux 暂未支持。
+- 发布包目前未签名；如需减少 SmartScreen 提示，可以接入代码签名证书。
 - 104 布局按标准全键盘排列，包含 F 区、导航区、方向键和小键盘。
 
 ## 本分支的改动
@@ -355,13 +315,13 @@ pnpm dev
 - **健壮性加固** — 本地配置原子写入与损坏隔离、写盘失败上报、`update_settings` 缩短持锁、MCP 批处理与请求上限、设置页保存失败回滚、CI 增加 `cargo test` / 前端 vitest / 内置毛色三方一致性检查。
 - **托盘小憩/唤醒** — 托盘菜单新增「小憩片刻 / 唤醒小猫」，把渲染器早已实现却未接线的 `fastForwardToSleep` 纳入正式契约自检。
 - **状态气泡** — 小猫头顶显示当前状态或正在做的动作（舔爪、揣手、伸懒腰等），默认开启，Win7 兼容模式自动停用，可在设置里关闭。
-- **版本化发布** — 统一四处版本号并打通 tag 触发的一键构建发布流程（Windows x64/ARM64 NSIS、Win7 便携版、macOS Intel/Apple Silicon DMG）。
+- **版本化发布** — 统一四处版本号并打通 tag 触发的一键构建发布流程（Windows x64/ARM64 NSIS、Win7 便携版）。
 
 ## 发布
 
 1. 同步 `package.json`、`package-lock.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 与 `src-tauri/Cargo.lock` 的版本号。
 2. 推送 `vX.Y.Z` tag。
-3. GitHub Actions 的 Release 工作流构建 Windows x64/ARM64 NSIS 与 macOS Intel/Apple Silicon DMG，并发布 Release，附 `SHA256SUMS.txt`。
+3. GitHub Actions 的 Release 工作流构建 Windows x64/ARM64 NSIS 与 Win7 兼容便携版，并发布 Release，附 `SHA256SUMS.txt`。
 
 发版只走 tag 触发的一次构建；不要先手动运行 “Build bundles” 再打 tag。手动构建工作流只用于排障。
 
