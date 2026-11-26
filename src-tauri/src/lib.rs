@@ -887,13 +887,13 @@ fn open_project_page() {
     #[cfg(windows)]
     {
         let _ = std::process::Command::new("cmd")
-            .args(["/C", "start", "", "https://github.com/7wdn/7paws"])
+            .args(["/C", "start", "", "https://github.com/ElvisLoo/7paws"])
             .spawn();
     }
     #[cfg(target_os = "macos")]
     {
         let _ = std::process::Command::new("open")
-            .arg("https://github.com/7wdn/7paws")
+            .arg("https://github.com/ElvisLoo/7paws")
             .spawn();
     }
 }
@@ -903,13 +903,13 @@ fn open_release_page() {
     #[cfg(windows)]
     {
         let _ = std::process::Command::new("cmd")
-            .args(["/C", "start", "", "https://github.com/7wdn/7paws/releases/latest"])
+            .args(["/C", "start", "", "https://github.com/ElvisLoo/7paws/releases/latest"])
             .spawn();
     }
     #[cfg(target_os = "macos")]
     {
         let _ = std::process::Command::new("open")
-            .arg("https://github.com/7wdn/7paws/releases/latest")
+            .arg("https://github.com/ElvisLoo/7paws/releases/latest")
             .spawn();
     }
 }

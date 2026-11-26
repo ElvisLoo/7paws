@@ -2,14 +2,16 @@
   <img src="assets/logo.png" alt="7paws" width="128" height="128" />
   <h1>7paws</h1>
   <p>Windows 与 macOS 的 3D 桌面小猫桌宠<br>全局键鼠响应 · 照片或 AI 定制专属猫咪 · 摸猫呼噜 · 点击穿透</p>
-  <p><a href="https://github.com/7wdn/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/7wdn/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/7wdn/7paws/issues">反馈</a></p>
+  <p><a href="https://github.com/ElvisLoo/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/issues">反馈</a></p>
 </div>
 
+<p align="center">本仓库是 <a href="https://github.com/7wdn/7paws">7wdn/7paws</a> 的增强分支，由 <a href="https://github.com/ElvisLoo">ElvisLoo</a> 维护：在跟进上游的同时补充健壮性加固与新功能（托盘小憩/唤醒、状态气泡等），当前版本 v0.5.0。</p>
+
 <div align="center">
-  <a href="https://github.com/7wdn/7paws/releases"><img src="https://img.shields.io/github/v/release/7wdn/7paws?include_prereleases&amp;style=flat-square" alt="Release" /></a>
-  <a href="https://github.com/7wdn/7paws"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue?style=flat-square" alt="Platforms" /></a>
+  <a href="https://github.com/ElvisLoo/7paws/releases"><img src="https://img.shields.io/github/v/release/ElvisLoo/7paws?include_prereleases&amp;style=flat-square" alt="Release" /></a>
+  <a href="https://github.com/ElvisLoo/7paws"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-blue?style=flat-square" alt="Platforms" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" /></a>
-  <a href="https://github.com/7wdn/7paws/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/7wdn/7paws/ci.yml?branch=main&amp;style=flat-square" alt="CI" /></a>
+  <a href="https://github.com/ElvisLoo/7paws/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ElvisLoo/7paws/ci.yml?branch=main&amp;style=flat-square" alt="CI" /></a>
 </div>
 
 <div align="center">
@@ -42,6 +44,7 @@
 - [浏览器预览](#浏览器预览)
 - [隐私与安全](#隐私与安全)
 - [当前范围](#当前范围)
+- [本分支的改动](#本分支的改动)
 - [发布](#发布)
 - [贡献者](#贡献者)
 - [开源协议](#开源协议)
@@ -69,7 +72,7 @@
 
 ## 下载安装
 
-安装包发布在 [GitHub Releases](https://github.com/7wdn/7paws/releases)。
+安装包发布在本仓库的 [GitHub Releases](https://github.com/ElvisLoo/7paws/releases)。
 
 | 平台 | 安装包 | 说明 |
 | --- | --- | --- |
@@ -345,6 +348,15 @@ pnpm dev
 - 发布包目前未签名；macOS 26/27 上如果权限无法保持，需要 Developer ID 签名与公证。
 - 104 布局按标准全键盘排列，包含 F 区、导航区、方向键和小键盘。
 
+## 本分支的改动
+
+相对上游最新版本（v0.4.1），本分支在跟进上游功能之外补充了健壮性加固与新功能，完整记录见 [CHANGELOG.md](CHANGELOG.md)：
+
+- **健壮性加固** — 本地配置原子写入与损坏隔离、写盘失败上报、`update_settings` 缩短持锁、MCP 批处理与请求上限、设置页保存失败回滚、CI 增加 `cargo test` / 前端 vitest / 内置毛色三方一致性检查。
+- **托盘小憩/唤醒** — 托盘菜单新增「小憩片刻 / 唤醒小猫」，把渲染器早已实现却未接线的 `fastForwardToSleep` 纳入正式契约自检。
+- **状态气泡** — 小猫头顶显示当前状态或正在做的动作（舔爪、揣手、伸懒腰等），默认开启，Win7 兼容模式自动停用，可在设置里关闭。
+- **版本化发布** — 统一四处版本号并打通 tag 触发的一键构建发布流程（Windows x64/ARM64 NSIS、Win7 便携版、macOS Intel/Apple Silicon DMG）。
+
 ## 发布
 
 1. 同步 `package.json`、`package-lock.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 与 `src-tauri/Cargo.lock` 的版本号。
@@ -355,9 +367,13 @@ pnpm dev
 
 ## 贡献者
 
+本分支基于上游项目，感谢原作者与所有上游贡献者：
+
 <a href="https://github.com/7wdn/7paws/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=7wdn/7paws&max=300&columns=15" alt="7paws 贡献者" />
+  <img src="https://contrib.rocks/image?repo=7wdn/7paws&max=300&columns=15" alt="7paws 上游贡献者" />
 </a>
+
+本分支维护：[@ElvisLoo](https://github.com/ElvisLoo)。
 
 ## 开源协议
 

@@ -427,7 +427,7 @@ function isNewerVersion(remote: string, current: string): boolean {
 // unauthenticated callers, which shared IPs hit quickly).
 async function fetchLatestVersion(signal: AbortSignal): Promise<string | null> {
   try {
-    const response = await fetch("https://data.jsdelivr.com/v1/packages/gh/7wdn/7paws", { signal });
+    const response = await fetch("https://data.jsdelivr.com/v1/packages/gh/ElvisLoo/7paws", { signal });
     if (response.ok) {
       const data = (await response.json()) as { versions?: { version?: string }[] };
       let latest = "";
@@ -440,7 +440,7 @@ async function fetchLatestVersion(signal: AbortSignal): Promise<string | null> {
   } catch {
     // Fall through to the releases API.
   }
-  const response = await fetch("https://api.github.com/repos/7wdn/7paws/releases/latest", {
+  const response = await fetch("https://api.github.com/repos/ElvisLoo/7paws/releases/latest", {
     signal,
     headers: { Accept: "application/vnd.github+json" },
   });
@@ -1233,7 +1233,7 @@ function bindControls() {
     if (isTauri) {
       void invoke("open_release_page");
     } else {
-      window.open("https://github.com/7wdn/7paws/releases/latest", "_blank");
+      window.open("https://github.com/ElvisLoo/7paws/releases/latest", "_blank");
     }
   });
 
@@ -1241,7 +1241,7 @@ function bindControls() {
     if (isTauri) {
       void invoke("open_project_page");
     } else {
-      window.open("https://github.com/7wdn/7paws", "_blank");
+      window.open("https://github.com/ElvisLoo/7paws", "_blank");
     }
   });
 
