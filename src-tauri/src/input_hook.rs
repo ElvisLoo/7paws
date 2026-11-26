@@ -1,5 +1,6 @@
 use crate::config::AppSettings;
 use crate::keymap;
+use crate::typing::TypingStats;
 #[cfg(target_os = "macos")]
 use crate::keymap_macos;
 use serde::Serialize;
@@ -110,7 +111,11 @@ fn code_for_raw(vk: u32, scan: u32, extended: bool) -> &'static str {
     }
 }
 
-pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
+pub fn start_global_hooks(
+    app: AppHandle,
+    settings: Arc<Mutex<AppSettings>>,
+    typing_stats: Arc<Mutex<TypingStats>>,
+) {
     let (tx, rx) = mpsc::channel::<RawHookMsg>();
     let _ = HOOK_TX.set(tx);
 
@@ -124,8 +129,27 @@ pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
         let mut last_wheel_emit = Instant::now() - Duration::from_secs(1);
         #[cfg(windows)]
         let mut last_mouse_xy: Option<(i32, i32)> = None;
+        let mut last_typing_save = Instant::now() - Duration::from_secs(10);
+        let mut last_typing_emit: Option<TypingStats> = None;
 
-        while let Ok(msg) = rx.recv() {
+        loop {
+            let msg = match rx.recv_timeout(Duration::from_millis(500)) {
+                Ok(msg) => Some(msg),
+                Err(mpsc::RecvTimeoutError::Timeout) => None,
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            };
+            let msg = match msg {
+                Some(msg) => msg,
+                None => {
+                    flush_typing_stats(
+                        &app,
+                        &typing_stats,
+                        &mut last_typing_save,
+                        &mut last_typing_emit,
+                    );
+                    continue;
+                }
+            };
             match msg {
                 RawHookMsg::KeyDown {
                     vk,
@@ -135,10 +159,10 @@ pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
                     if is_alt_vk(vk) {
                         ALT_HELD.store(true, Ordering::Relaxed);
                     }
-                    let privacy = settings
+                    let (privacy, typing_enabled) = settings
                         .lock()
-                        .map(|s| s.privacy_mode)
-                        .unwrap_or(false);
+                        .map(|s| (s.privacy_mode, s.typing_stats_enabled))
+                        .unwrap_or((false, false));
                     let idx = (vk as usize) % 1024;
                     let now = Instant::now();
                     let repeat = pressed[idx]
@@ -148,6 +172,13 @@ pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
                         pressed_at[idx] = now;
                     }
                     let code = code_for_raw(vk, scan, extended);
+                    // Privacy mode means no activity tracking, so its keystrokes
+                    // are never counted either.
+                    if !repeat && !privacy && typing_enabled {
+                        if let Ok(mut stats) = typing_stats.lock() {
+                            stats.record(code);
+                        }
+                    }
                     if privacy {
                         if !repeat && code != "Unidentified" {
                             let side = if keymap::is_left_hand(code) {
@@ -242,6 +273,7 @@ pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
                     }
                 }
             }
+            flush_typing_stats(&app, &typing_stats, &mut last_typing_save, &mut last_typing_emit);
         }
     });
 
@@ -249,6 +281,34 @@ pub fn start_global_hooks(app: AppHandle, settings: Arc<Mutex<AppSettings>>) {
     std::thread::spawn(run_windows_hook_loop);
     #[cfg(target_os = "macos")]
     std::thread::spawn(move || run_macos_hook_loop(mac_app));
+}
+
+/// Debounced persistence plus change-only UI updates for the typing counters.
+/// Called on every hook message and on each idle tick so a quiet app still
+/// flushes within a few seconds of the last keypress.
+fn flush_typing_stats(
+    app: &AppHandle,
+    typing_stats: &Arc<Mutex<TypingStats>>,
+    last_save: &mut Instant,
+    last_emit: &mut Option<TypingStats>,
+) {
+    let snapshot = {
+        let mut stats = match typing_stats.lock() {
+            Ok(stats) => stats,
+            Err(_) => return,
+        };
+        if stats.dirty && last_save.elapsed() >= Duration::from_secs(3) {
+            if crate::typing::save_typing_stats(&stats).is_ok() {
+                stats.dirty = false;
+            }
+            *last_save = Instant::now();
+        }
+        stats.clone()
+    };
+    if last_emit.as_ref() != Some(&snapshot) {
+        *last_emit = Some(snapshot.clone());
+        let _ = app.emit("cat-typing-stats", snapshot);
+    }
 }
 
 #[cfg(windows)]

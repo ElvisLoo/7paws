@@ -80,6 +80,22 @@
         </div>
 
         <div class="menu-section">
+          <div class="menu-label">打字统计</div>
+          <label class="toggle-row" for="typingStatsEnabled" title="只统计字母、数字与 F 功能键的数量，不记录具体按了什么">
+            <span>开启打字统计</span>
+            <input id="typingStatsEnabled" type="checkbox" />
+          </label>
+          <div class="typing-stats">
+            <div class="typing-row"><span>今日</span><span id="typingToday">0</span></div>
+            <div class="typing-row"><span>累计</span><span id="typingTotal">0</span></div>
+            <div class="typing-row"><span>字母</span><span id="typingLetters">0</span></div>
+            <div class="typing-row"><span>数字</span><span id="typingDigits">0</span></div>
+            <div class="typing-row"><span>功能键</span><span id="typingFunctionKeys">0</span></div>
+          </div>
+          <button id="typingResetBtn" class="btn ghost typing-reset" type="button">清零统计</button>
+        </div>
+
+        <div class="menu-section">
           <div class="menu-label">
             <span>大小</span>
             <span id="scaleValue" class="menu-value">100%</span>

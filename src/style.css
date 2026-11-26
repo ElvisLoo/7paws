@@ -86,6 +86,52 @@ body {
   display: none;
 }
 
+/* Keystroke counter badge: small, unobtrusive, never eats clicks. */
+.typing-bubble {
+  position: absolute;
+  z-index: 15;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 246, 0.78);
+  color: #5b5546;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(24, 20, 12, 0.12);
+  backdrop-filter: blur(6px);
+}
+
+.typing-bubble[hidden] {
+  display: none;
+}
+
+.typing-stats {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 8px;
+}
+
+.typing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.typing-row span:last-child {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.typing-reset {
+  width: 100%;
+}
+
 /* Fatal startup errors (missing DOM, boot failure) stay until fixed. */
 .fatal-banner {
   position: fixed;

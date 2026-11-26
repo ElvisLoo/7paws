@@ -41,12 +41,25 @@ export interface AppSettings {
   idleActions: boolean;
   showKeyLabels: boolean;
   showStatusBubble: boolean;
+  typingStatsEnabled: boolean;
   keyboardLayout: "65" | "104";
   showTrayIcon: boolean;
   mcpEnabled: boolean;
   reminderEnabled: boolean;
   reminderText: string;
   reminderIntervalMinutes: number;
+}
+
+export interface TypingStats {
+  total: number;
+  letters: number;
+  digits: number;
+  functionKeys: number;
+  todayTotal: number;
+  todayLetters: number;
+  todayDigits: number;
+  todayFunctionKeys: number;
+  day: string;
 }
 
 export type CatInput =

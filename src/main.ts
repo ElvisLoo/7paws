@@ -6,7 +6,7 @@ import { SevenPawsPet } from "./pet/sevenPaws.ts";
 import { COATS } from "./pet/coats";
 import { ReminderController } from "./reminder.ts";
 import { defaultSettings } from "./defaults";
-import type { AppSettings, CatInput, CustomCat } from "./types";
+import type { AppSettings, CatInput, CustomCat, TypingStats } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
 
@@ -18,6 +18,8 @@ let customCats: CustomCat[] = [];
 let scene: SevenPawsPet;
 let win7Mode = false;
 let statusBubble: HTMLDivElement | null = null;
+let typingBadge: HTMLDivElement | null = null;
+let typingStats: TypingStats | null = null;
 const reminder = new ReminderController();
 let lastReminderKey = "";
 
@@ -29,6 +31,16 @@ function setStatusLabel(label: string | null) {
   }
   if (statusBubble.textContent !== label) statusBubble.textContent = label;
   statusBubble.hidden = false;
+}
+
+function syncTypingBadge() {
+  if (!typingBadge) return;
+  const stats = typingStats;
+  const show = settings.typingStatsEnabled && stats !== null;
+  typingBadge.hidden = !show;
+  if (!stats) return;
+  const text = `⌨ 今日 ${stats.todayTotal.toLocaleString("zh-CN")}`;
+  if (typingBadge.textContent !== text) typingBadge.textContent = text;
 }
 
 function syncReminder() {
@@ -120,6 +132,11 @@ async function boot() {
     } catch {
       customCats = [];
     }
+    try {
+      typingStats = await invoke<TypingStats>("get_typing_stats");
+    } catch {
+      typingStats = null;
+    }
   }
 
   if (isTauri) {
@@ -142,6 +159,11 @@ async function boot() {
       statusBubble.className = "status-bubble";
       statusBubble.hidden = true;
       stage.appendChild(statusBubble);
+      typingBadge = document.createElement("div");
+      typingBadge.id = "typingBadge";
+      typingBadge.className = "typing-bubble";
+      typingBadge.hidden = true;
+      stage.appendChild(typingBadge);
     }
     scene = new SevenPawsPet(stage, settings, customCats, (regions) => {
       if (isTauri) void invoke("set_hit_regions", { regions });
@@ -159,6 +181,7 @@ async function boot() {
   bindPointer();
   listenGlobalKeysForDev();
   syncReminder();
+  syncTypingBadge();
 
   document.addEventListener("contextmenu", (event) => {
     event.preventDefault();
@@ -193,7 +216,12 @@ async function boot() {
       settings = ev.payload;
       scene.applySettings(settings, customCats);
       syncReminder();
+      syncTypingBadge();
       if (!settings.showStatusBubble && statusBubble) statusBubble.hidden = true;
+    });
+    await listen<TypingStats>("cat-typing-stats", (ev) => {
+      typingStats = ev.payload;
+      syncTypingBadge();
     });
     await listen<string>("cat-sleep", (ev) => {
       if (ev.payload === "sleep") scene.nap();

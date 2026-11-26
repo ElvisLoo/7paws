@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { COATS } from "./pet/coats";
 import { defaultSettings } from "./defaults";
-import type { AppSettings, CatPattern, CatSpot, CustomCat } from "./types";
+import type { AppSettings, CatPattern, CatSpot, CustomCat, TypingStats } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
 const isWindows = /Windows/i.test(navigator.userAgent);
@@ -34,6 +34,13 @@ const statusBubbleInput = document.getElementById("showStatusBubble") as HTMLInp
 const reminderEnabledInput = document.getElementById("reminderEnabled") as HTMLInputElement;
 const reminderTextInput = document.getElementById("reminderText") as HTMLInputElement;
 const reminderIntervalInput = document.getElementById("reminderInterval") as HTMLInputElement;
+const typingStatsEnabledInput = document.getElementById("typingStatsEnabled") as HTMLInputElement;
+const typingTodayEl = document.getElementById("typingToday") as HTMLSpanElement;
+const typingTotalEl = document.getElementById("typingTotal") as HTMLSpanElement;
+const typingLettersEl = document.getElementById("typingLetters") as HTMLSpanElement;
+const typingDigitsEl = document.getElementById("typingDigits") as HTMLSpanElement;
+const typingFunctionKeysEl = document.getElementById("typingFunctionKeys") as HTMLSpanElement;
+const typingResetBtn = document.getElementById("typingResetBtn") as HTMLButtonElement;
 const mcpEnabledInput = document.getElementById("mcpEnabled") as HTMLInputElement;
 const mcpClientSelect = document.getElementById("mcpClientSelect") as HTMLButtonElement;
 const mcpClientLabel = mcpClientSelect.querySelector(".dropdown-label") as HTMLSpanElement;
@@ -92,6 +99,13 @@ const REQUIRED_DOM_IDS = [
   "reminderEnabled",
   "reminderText",
   "reminderInterval",
+  "typingStatsEnabled",
+  "typingToday",
+  "typingTotal",
+  "typingLetters",
+  "typingDigits",
+  "typingFunctionKeys",
+  "typingResetBtn",
   "mcpEnabled",
   "mcpClientSelect",
   "mcpCopyBtn",
@@ -131,6 +145,8 @@ let appVersion = "dev";
 let reminderTextTimer: number | null = null;
 let reminderIntervalTimer: number | null = null;
 let photoPickerOpen = false;
+let typingStats: TypingStats | null = null;
+let typingArmedAt = 0;
 let noticeTimer: number | null = null;
 
 function missingDomIds(): string[] {
@@ -197,6 +213,21 @@ function setPhotoPickerOpen(open: boolean) {
 function disarmDelete() {
   deleteArmedAt = 0;
   deleteCatBtn.textContent = "删除这只猫";
+}
+
+function disarmTypingReset() {
+  typingArmedAt = 0;
+  typingResetBtn.textContent = "清零统计";
+}
+
+function renderTypingStats() {
+  const stats = typingStats;
+  const fmt = (value: number) => value.toLocaleString("zh-CN");
+  typingTodayEl.textContent = fmt(stats?.todayTotal ?? 0);
+  typingTotalEl.textContent = fmt(stats?.total ?? 0);
+  typingLettersEl.textContent = fmt(stats?.letters ?? 0);
+  typingDigitsEl.textContent = fmt(stats?.digits ?? 0);
+  typingFunctionKeysEl.textContent = fmt(stats?.functionKeys ?? 0);
 }
 
 interface Choice {
@@ -857,6 +888,7 @@ function syncCoatGrid() {
 
 function syncControls() {
   disarmDelete();
+  disarmTypingReset();
   scaleSlider.value = String(Math.round(settings.scale * 100));
   scaleValue.textContent = `${Math.round(settings.scale * 100)}%`;
   opacitySlider.value = String(Math.round(settings.opacity * 100));
@@ -877,6 +909,8 @@ function syncControls() {
   idleActionsInput.checked = settings.idleActions;
   labelsInput.checked = settings.showKeyLabels;
   statusBubbleInput.checked = settings.showStatusBubble;
+  typingStatsEnabledInput.checked = settings.typingStatsEnabled;
+  renderTypingStats();
   reminderEnabledInput.checked = settings.reminderEnabled;
   if (document.activeElement !== reminderTextInput) reminderTextInput.value = settings.reminderText;
   if (document.activeElement !== reminderIntervalInput) {
@@ -1086,6 +1120,11 @@ async function refresh() {
     } catch {
       appVersion = "dev";
     }
+    try {
+      typingStats = await invoke<TypingStats>("get_typing_stats");
+    } catch {
+      // Keep the last known counters.
+    }
   }
   appVersionEl.textContent = appVersion === "dev" ? "7paws 开发预览" : `7paws v${appVersion}`;
   syncControls();
@@ -1163,6 +1202,29 @@ function bindControls() {
   });
   statusBubbleInput.addEventListener("change", () => {
     void saveSettings({ showStatusBubble: statusBubbleInput.checked });
+  });
+  typingStatsEnabledInput.addEventListener("change", () => {
+    void saveSettings({ typingStatsEnabled: typingStatsEnabledInput.checked });
+  });
+  typingResetBtn.addEventListener("click", async () => {
+    if (typingArmedAt && Date.now() - typingArmedAt < 3000) {
+      disarmTypingReset();
+      typingResetBtn.disabled = true;
+      try {
+        typingStats = await invoke<TypingStats>("reset_typing_stats");
+        renderTypingStats();
+      } catch (error) {
+        showNotice(`清零失败：${describeError(error)}`, true);
+      } finally {
+        typingResetBtn.disabled = false;
+      }
+      return;
+    }
+    typingArmedAt = Date.now();
+    typingResetBtn.textContent = "再点一次确认清零";
+    window.setTimeout(() => {
+      if (typingArmedAt && Date.now() - typingArmedAt >= 3000) disarmTypingReset();
+    }, 3050);
   });
 
   reminderEnabledInput.addEventListener("change", () => {
@@ -1405,6 +1467,10 @@ async function boot() {
     await listen<CustomCat[]>("cat-cats", (ev) => {
       customCats = ev.payload;
       syncControls();
+    });
+    await listen<TypingStats>("cat-typing-stats", (ev) => {
+      typingStats = ev.payload;
+      renderTypingStats();
     });
     await listen<string>("cat-storage-error", (ev) => {
       showNotice(ev.payload || "本地数据保存失败。", true);

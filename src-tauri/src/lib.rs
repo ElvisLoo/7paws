@@ -8,6 +8,7 @@ mod keymap;
 mod keymap_macos;
 mod mcp;
 mod tray;
+mod typing;
 #[cfg(all(windows, feature = "win7"))]
 mod win7;
 #[cfg(windows)]
@@ -74,6 +75,7 @@ pub struct AppState {
     custom_cats: Arc<Mutex<Vec<cats::CustomCat>>>,
     dragging: Arc<AtomicBool>,
     hit_regions: Arc<Mutex<Vec<[f64; 4]>>>,
+    typing_stats: Arc<Mutex<typing::TypingStats>>,
     /// Epoch millis until which the settings window hosts a native dialog
     /// (file picker) and must not be auto-closed by the global mouse hook.
     settings_modal_until: Arc<AtomicU64>,
@@ -426,6 +428,23 @@ fn get_settings(state: State<'_, AppState>) -> AppSettings {
 }
 
 #[tauri::command]
+fn get_typing_stats(state: State<'_, AppState>) -> typing::TypingStats {
+    state.typing_stats.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn reset_typing_stats(app: AppHandle, state: State<'_, AppState>) -> typing::TypingStats {
+    let out = {
+        let mut stats = state.typing_stats.lock().unwrap();
+        stats.reset();
+        let _ = typing::save_typing_stats(&stats);
+        stats.clone()
+    };
+    let _ = app.emit("cat-typing-stats", out.clone());
+    out
+}
+
+#[tauri::command]
 fn update_settings(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -469,6 +488,7 @@ fn update_settings(
         s.idle_actions = patch.idle_actions;
         s.show_key_labels = patch.show_key_labels;
         s.show_status_bubble = patch.show_status_bubble;
+        s.typing_stats_enabled = patch.typing_stats_enabled;
         s.keyboard_layout = patch.keyboard_layout;
         s.show_tray_icon = patch.show_tray_icon;
         s.mcp_enabled = patch.mcp_enabled;
@@ -1230,6 +1250,7 @@ fn run_inner(_restarting: bool) {
     let dragging = Arc::new(AtomicBool::new(false));
     let hit_regions = Arc::new(Mutex::new(default_regions()));
     let settings_modal_until = Arc::new(AtomicU64::new(0));
+    let typing_stats = typing::load_typing_stats();
 
     let settings_setup = settings.clone();
     let cats_setup = custom_cats.clone();
@@ -1242,6 +1263,7 @@ fn run_inner(_restarting: bool) {
             custom_cats: custom_cats.clone(),
             dragging,
             hit_regions,
+            typing_stats: typing_stats.clone(),
             settings_modal_until,
         })
         .setup(move |app| {
@@ -1295,7 +1317,11 @@ fn run_inner(_restarting: bool) {
             }
 
             tray::setup_tray(&handle, settings_setup.clone())?;
-            input_hook::start_global_hooks(handle.clone(), settings_setup.clone());
+            input_hook::start_global_hooks(
+                handle.clone(),
+                settings_setup.clone(),
+                typing_stats.clone(),
+            );
             #[cfg(windows)]
             windows_zorder::start_guard(handle.clone(), settings_setup.clone(), drag_setup.clone());
             start_hit_test_loop(
@@ -1311,6 +1337,8 @@ fn run_inner(_restarting: bool) {
         })
         .invoke_handler(tauri::generate_handler![
             get_settings,
+            get_typing_stats,
+            reset_typing_stats,
             update_settings,
             open_settings,
             close_settings,

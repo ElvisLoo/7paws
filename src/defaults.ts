@@ -18,6 +18,7 @@ export const defaultSettings: AppSettings = {
   idleActions: true,
   showKeyLabels: true,
   showStatusBubble: true,
+  typingStatsEnabled: true,
   keyboardLayout: "65",
   showTrayIcon: true,
   mcpEnabled: true,
