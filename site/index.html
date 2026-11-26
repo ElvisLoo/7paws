@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>7paws · Windows 桌面小猫桌宠</title>
+<meta name="description" content="7paws 是 Windows 上的 3D 桌面小猫桌宠：全局键鼠响应、摸猫呼噜、照片或 AI 定制专属猫咪。这是 ElvisLoo 的增强分支（v0.5.0），含健壮性加固、托盘小憩/唤醒与状态气泡。" />
+<link rel="icon" href="assets/logo.png" />
+<style>
+  :root{
+    --paper:#f8f4ea; --card:#fffdf6; --line:#e6ddc8; --line2:#efe7d2;
+    --ink:#2c2a24; --muted:#6f6a5c; --faint:#8a8268;
+    --olive:#6a7a45; --olive-deep:#5a6939; --olive-bg:#eef0e2;
+    --warn-bg:#fbf3df; --warn-line:#e6d3ac; --warn-ink:#7a6435;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+
+  header{position:sticky;top:0;z-index:40;background:rgba(251,248,239,.92);
+         backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;justify-content:space-between;height:56px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+  .brand img{width:28px;height:28px;border-radius:7px}
+  .brand .ver{font-size:12px;color:var(--muted);border:1px solid #d8cdb2;border-radius:999px;padding:2px 9px}
+  nav{display:none;gap:26px;font-size:14px;color:#5b5648}
+  nav a:hover{color:var(--ink)}
+  @media(min-width:760px){nav{display:flex}}
+  .btn{display:inline-flex;align-items:center;gap:7px;border-radius:10px;font-size:14px;font-weight:500;
+       padding:8px 16px;background:var(--ink);color:#fdfaf2}
+  .btn:hover{background:#45423a}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid #cfc4a6}
+  .btn.ghost:hover{border-color:#b8ab88}
+  .btn.olive{background:var(--olive);color:#fff}
+  .btn.olive:hover{background:var(--olive-deep)}
+
+  .hero{padding:64px 0 56px;display:grid;gap:40px;align-items:center}
+  @media(min-width:880px){.hero{grid-template-columns:1.05fr .95fr;padding:84px 0 64px}}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid #d8cdb2;background:var(--card);
+        color:var(--muted);font-size:12.5px;border-radius:999px;padding:5px 13px}
+  .pill svg{color:var(--olive)}
+  h1{margin:22px 0 0;font-size:clamp(30px,5vw,46px);line-height:1.25;letter-spacing:-.01em}
+  .lede{margin:16px 0 0;max-width:56ch;color:#5b5648;font-size:15.5px}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+  .stats{display:flex;gap:34px;margin-top:34px;font-size:14px}
+  .stats dt{color:var(--faint)}
+  .stats dd{margin:4px 0 0;font-size:22px;font-weight:700}
+  .shot{position:relative}
+  .shot-main{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);
+            overflow:hidden;box-shadow:0 18px 50px -24px rgba(70,64,44,.45)}
+  .shot-main img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+  .shot-sub{position:absolute;left:-14px;bottom:-22px;width:128px;transform:rotate(-4deg);
+            border:1px solid var(--line);background:var(--card);border-radius:12px;overflow:hidden;
+            box-shadow:0 12px 28px -16px rgba(70,64,44,.5)}
+  .shot-sub img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+  .caption{margin-top:30px;text-align:center;font-size:12px;color:var(--faint)}
+
+  .strip{border-block:1px solid var(--line);background:#f2ecdc}
+  .strip .wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 34px;padding:16px 20px;
+              font-size:12.5px;letter-spacing:.04em;color:var(--muted)}
+
+  section{padding:64px 0}
+  .kicker{font-size:12px;letter-spacing:.14em;color:var(--olive);text-transform:uppercase}
+  h2{margin:8px 0 0;font-size:clamp(22px,3vw,28px)}
+  .sub{margin:10px 0 0;font-size:14px;color:var(--muted);max-width:72ch}
+
+  .grid{display:grid;gap:14px;margin-top:30px}
+  @media(min-width:620px){.grid.c3{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:920px){.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c2{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;
+        transition:transform .15s ease,box-shadow .15s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:0 14px 30px -20px rgba(70,64,44,.5)}
+  .ico{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:11px;
+       background:var(--olive-bg);color:var(--olive-deep)}
+  .ico.sm{width:36px;height:36px;border-radius:9px}
+  .card h3{margin:14px 0 6px;font-size:16px}
+  .card p{margin:0;font-size:13.5px;line-height:1.7;color:var(--muted)}
+  .card .head{display:flex;align-items:center;gap:12px}
+  .card .head h3{margin:0}
+
+  .shots{display:grid;gap:14px;margin-top:30px}
+  @media(min-width:760px){.shots{grid-template-columns:repeat(3,1fr)}}
+  .shots figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  .shots img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+  .shots figcaption{padding:9px 12px;font-size:12px;color:var(--faint);border-top:1px solid var(--line2)}
+
+  .band{border-block:1px solid var(--line);background:#f2ecdc}
+
+  .dl{margin-top:26px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden}
+  .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding:15px 20px;font-size:14px}
+  .row + .row{border-top:1px solid var(--line2)}
+  .row:hover{background:#faf5e8}
+  .row .name{flex:0 0 120px;font-weight:600}
+  .row .file{flex:1 1 260px;min-width:0;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--faint);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .note{display:none;font-size:12px;color:var(--faint)}
+  @media(min-width:760px){.row .note{display:block}}
+  .row .size{flex:0 0 auto;font-size:12px;color:var(--faint)}
+  .sums{padding:12px 20px;border-top:1px solid var(--line2);font-size:12.5px}
+  .sums a{color:var(--olive)}
+  .warn{margin-top:20px;display:flex;gap:12px;align-items:flex-start;border:1px solid var(--warn-line);
+        background:var(--warn-bg);color:var(--warn-ink);border-radius:12px;padding:14px 16px;font-size:12.5px;line-height:1.6}
+  .warn svg{flex:0 0 auto;margin-top:2px}
+
+  footer{border-top:1px solid var(--line);padding:32px 0 44px;font-size:12.5px;color:var(--muted)}
+  .foot{display:flex;flex-direction:column;gap:12px;justify-content:space-between}
+  @media(min-width:720px){.foot{flex-direction:row;align-items:center}}
+  .foot nav{display:flex;gap:18px;font-size:12.5px}
+  .foot a:hover{color:var(--ink)}
+  .foot .links{display:flex;gap:16px}
+  .foot .links svg{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="brand" href="#top">
+      <img src="assets/logo.png" alt="7paws logo" />
+      7paws <span class="ver">v0.5.0</span>
+    </a>
+    <nav>
+      <a href="#features">功能特性</a>
+      <a href="#download">下载安装</a>
+      <a href="#fork">本分支改动</a>
+      <a href="#compat">兼容性</a>
+    </nav>
+    <a class="btn" href="https://github.com/ElvisLoo/7paws">仓库</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Hero -->
+  <section class="hero" id="top">
+    <div>
+      <span class="pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg>
+        Windows 10/11 · 开源 · MIT · ElvisLoo 增强分支
+      </span>
+      <h1>把一只小猫<br />留在你的桌面上</h1>
+      <p class="lede">全局键鼠响应的 3D 桌面小猫桌宠：摸头呼噜、陪你打字、玩鼠标，会按你的照片生成专属配色，也能通过 AI（MCP）查询状态。本分支在跟进上游之外补充了健壮性加固与新功能。</p>
+      <div class="cta">
+        <a class="btn olive" href="https://github.com/ElvisLoo/7paws/releases/tag/v0.5.0">下载 v0.5.0</a>
+        <a class="btn ghost" href="https://github.com/ElvisLoo/7paws">查看源码</a>
+      </div>
+      <dl class="stats">
+        <div><dt>内置毛色</dt><dd>13 种</dd></div>
+        <div><dt>互动动作</dt><dd>20+ 个</dd></div>
+        <div><dt>强制联网</dt><dd>无</dd></div>
+      </dl>
+    </div>
+    <div class="shot">
+      <div class="shot-main"><img src="assets/demo-dami.gif" alt="大面在桌面上活动" /></div>
+      <div class="shot-sub"><img src="assets/demo-mianmian.gif" alt="眯眯在桌面上活动" /></div>
+      <p class="caption">实际运行画面：大面 / 眯眯</p>
+    </div>
+  </section>
+</div>
+
+<div class="strip">
+  <div class="wrap">Tauri 2 &nbsp;·&nbsp; three.js &nbsp;·&nbsp; Rust + TypeScript &nbsp;·&nbsp; Web Speech API &nbsp;·&nbsp; SQLite + 本地优先 &nbsp;·&nbsp; MIT License</div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="wrap">
+    <span class="kicker">Features</span>
+    <h2>功能特性</h2>
+    <p class="sub">从全局输入响应到专属猫咪定制，一只安静陪伴、也不打扰工作的桌宠。</p>
+    <div class="grid c3">
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 9 5 12 1.8-5.2L21 14Z"/><path d="M7.2 2.2 8 5.1"/><path d="M5.1 8 2.2 7.2"/><path d="M14 4.1 12 6"/><path d="m6 12-1.9 2"/></svg></span>
+        <h3>全局键鼠响应</h3>
+        <p>按键、鼠标点击与滚轮都会得到回应；内置 MCP 读取工具可查询应用状态。</p>
+      </article>
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <h3>点击穿透与锁定</h3>
+        <p>透明区域不挡桌面操作，需要时一键锁定整窗穿透，按住 Alt 临时恢复鼠标操作。</p>
+      </article>
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span>
+        <h3>摸猫呼噜</h3>
+        <p>按住猫头触发呼噜；呼噜开关独立控制是否发声，睡眠或锁定时自动静音。</p>
+      </article>
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C22 6.012 17.51 2 12 2z"/></svg></span>
+        <h3>我的猫定制</h3>
+        <p>13 种内置毛色，支持照片取色、AI 建议与十六进制色槽，左右眼可配异瞳，多只命名切换。</p>
+      </article>
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg></span>
+        <h3>闲置自由动作</h3>
+        <p>短暂无操作后随机舔爪、舔毛、揣手手或蜷缩，一有输入立刻恢复，可在设置里关闭。</p>
+      </article>
+      <article class="card">
+        <span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+        <h3>托盘小憩与唤醒</h3>
+        <p>托盘菜单一键让小猫小憩或唤醒；状态气泡实时显示它正在做什么（默认开启）。</p>
+      </article>
+    </div>
+
+    <div class="shots">
+      <figure><img src="assets/settings-custom-cat.png" alt="我的猫：异瞳色槽与照片取色" /><figcaption>我的猫：异瞳色槽、花纹与斑纹</figcaption></figure>
+      <figure><img src="assets/settings-toggles.png" alt="透明度、睡眠时间与各项开关" /><figcaption>透明度、睡眠时间与各项开关</figcaption></figure>
+      <figure><img src="assets/settings-mcp.png" alt="毛色码与 AI 接入（MCP）配置" /><figcaption>毛色码与 AI 接入（MCP）</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- Fork changes -->
+<section id="fork" class="band">
+  <div class="wrap">
+    <span class="kicker">Fork Notes</span>
+    <h2>本分支的改动</h2>
+    <p class="sub">相对上游 v0.4.1，这个由 ElvisLoo 维护的分支在跟进上游功能之外补充了以下增强，完整记录见仓库 CHANGELOG。</p>
+    <div class="grid c2">
+      <article class="card">
+        <div class="head">
+          <span class="ico sm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <h3>健壮性加固</h3>
+        </div>
+        <p>配置原子写入与损坏隔离、写盘失败上报、缩短持锁、MCP 批处理与请求上限、CI 增加 cargo test 与前端用例。</p>
+      </article>
+      <article class="card">
+        <div class="head">
+          <span class="ico sm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+          <h3>托盘小憩 / 唤醒</h3>
+        </div>
+        <p>把渲染器早已实现却未接线的 fastForwardToSleep 纳入正式契约自检，托盘一键让小猫入睡或醒来。</p>
+      </article>
+      <article class="card">
+        <div class="head">
+          <span class="ico sm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"/></svg></span>
+          <h3>状态气泡</h3>
+        </div>
+        <p>小猫头顶显示当前状态与正在做的动作，文案变化才刷新，Win7 兼容模式自动停用，可在设置里关闭。</p>
+      </article>
+      <article class="card">
+        <div class="head">
+          <span class="ico sm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg></span>
+          <h3>版本化发布</h3>
+        </div>
+        <p>统一四处版本号并打通 tag 触发的自动构建发布，产物附 SHA256SUMS 校验文件。</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Download -->
+<section id="download">
+  <div class="wrap">
+    <span class="kicker">Download</span>
+    <h2>下载安装</h2>
+    <p class="sub">Windows 10/11 x64 与 ARM64 安装包及便携版，均附 SHA256SUMS 校验文件。</p>
+    <div class="dl">
+      <a class="row" href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/7paws_0.5.0_x64-setup.exe">
+        <span class="name">x64 安装包</span>
+        <span class="file">7paws_0.5.0_x64-setup.exe</span>
+        <span class="note">多数 Windows 10/11 电脑</span>
+        <span class="size">3.6 MB</span>
+      </a>
+      <a class="row" href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/7paws_0.5.0_arm64-setup.exe">
+        <span class="name">ARM64 安装包</span>
+        <span class="file">7paws_0.5.0_arm64-setup.exe</span>
+        <span class="note">ARM 架构 Windows 设备</span>
+        <span class="size">3.5 MB</span>
+      </a>
+      <a class="row" href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/7paws_0.5.0_x64-portable.zip">
+        <span class="name">x64 便携版</span>
+        <span class="file">7paws_0.5.0_x64-portable.zip</span>
+        <span class="note">免安装，自带 WebView2 运行时</span>
+        <span class="size">2.0 MB</span>
+      </a>
+      <a class="row" href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/7paws_0.5.0_arm64-portable.zip">
+        <span class="name">ARM64 便携版</span>
+        <span class="file">7paws_0.5.0_arm64-portable.zip</span>
+        <span class="note">ARM 设备免安装</span>
+        <span class="size">2.0 MB</span>
+      </a>
+      <a class="row" href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/7paws_0.5.0-win7-x64-portable.zip">
+        <span class="name">Win7 兼容便携版</span>
+        <span class="file">7paws_0.5.0-win7-x64-portable.zip</span>
+        <span class="note">非官方兼容构建，内置 WebView2 109</span>
+        <span class="size">205 MB</span>
+      </a>
+      <div class="sums"><a href="https://github.com/ElvisLoo/7paws/releases/download/v0.5.0/SHA256SUMS.txt">SHA256SUMS.txt · 校验文件完整性</a></div>
+    </div>
+    <div class="warn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div>发布包未签名，首次运行可能触发 SmartScreen：确认来自本仓库 Releases 后选择「更多信息 → 仍要运行」。安装版需要联网安装 Microsoft Edge WebView2 Runtime；离线环境请选择便携版（已内置运行时）。</div>
+    </div>
+  </div>
+</section>
+
+<!-- Compatibility -->
+<section id="compat" class="band">
+  <div class="wrap">
+    <span class="kicker">Compatibility</span>
+    <h2>兼容性</h2>
+    <div class="grid c3">
+      <article class="card">
+        <span class="ico sm" style="color:var(--olive-deep)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span>
+        <h3>Windows 10/11</h3>
+        <p>x64 与 ARM64 正式支持，包括 NSIS 安装版与便携版。</p>
+      </article>
+      <article class="card">
+        <span class="ico sm" style="color:var(--muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg></span>
+        <h3>Windows 7 SP1 x64</h3>
+        <p>非官方兼容便携版，内置 WebView2 109 固定运行时，解压即用。</p>
+      </article>
+      <article class="card">
+        <span class="ico sm" style="color:#a08a4a"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+        <h3>其他平台</h3>
+        <p>Windows 8 与 Linux 暂未支持；本分支专注 Windows。</p>
+      </article>
+    </div>
+    <p class="sub" style="margin-top:22px">默认不需要管理员权限；开启「默认以管理员身份运行」后，下次启动按需请求 UAC，用于全屏游戏置顶守卫。</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div>基于上游 <a href="https://github.com/7wdn/7paws" style="color:var(--olive)">7wdn/7paws</a>（MIT），由 <a href="https://github.com/ElvisLoo" style="color:var(--olive)">ElvisLoo</a> 维护。</div>
+    <div class="links">
+      <a href="https://github.com/ElvisLoo/7paws"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>GitHub</a>
+      <a href="https://github.com/ElvisLoo/7paws/releases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>Releases</a>
+      <a href="https://github.com/ElvisLoo/7paws/issues"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>反馈</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

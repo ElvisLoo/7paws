@@ -1,0 +1,55 @@
+name: Deploy Site to Pages
+
+# 单页介绍站（site/）发布到 GitHub Pages。
+# 之所以用 peaceiris/actions-gh-pages 推到 gh-pages 分支，
+# 而不是官方 Pages Actions：本仓库的 main 已开启分支保护，
+# 旧式「从分支发布」的 Pages 设置由仓库 Settings 控制、无需额外 token，
+# 与已有的 Git Data API 推送链路一致。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate site links
+        run: |
+          # 站点引用了本仓库资源与下载直链，缺失会 404；构建前拦一道。
+          python3 - <<'PY'
+          import re, sys, pathlib
+          root = pathlib.Path("site")
+          html = (root / "index.html").read_text(encoding="utf-8")
+          missing = []
+          for src in re.findall(r'(?:src|href)="([^"]+)"', html):
+              if src.startswith(("http://", "https://", "#")):
+                  continue
+              if not (root / src).exists():
+                  missing.append(src)
+          if missing:
+              print("missing local assets:", *missing, sep="\n  ")
+              sys.exit(1)
+          print("local asset check ok")
+          PY
+
+      - name: Deploy to Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "deploy: ${{ github.event.head_commit.message }}"
