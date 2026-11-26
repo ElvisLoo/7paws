@@ -15,6 +15,16 @@ use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter};
 
+#[cfg(windows)]
+use windows::Win32::System::Com::{
+    CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
+};
+#[cfg(windows)]
+use windows::Win32::UI::Accessibility::{
+    CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern,
+    IUIAutomationValuePattern, UIA_TextPatternId, UIA_ValuePatternId,
+};
+
 use crate::config::AppSettings;
 use crate::typing::TypingStats;
 
@@ -39,14 +49,6 @@ fn run(
     settings: Arc<Mutex<AppSettings>>,
     typing_stats: Arc<Mutex<TypingStats>>,
 ) {
-    use windows::Win32::System::Com::{
-        CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
-    };
-    use windows::Win32::UI::Accessibility::{
-        CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern,
-        IUIAutomationValuePattern, UIA_TextPatternId, UIA_ValuePatternId,
-    };
-
     // DocumentRange exposes the whole document, which can be huge; the cap
     // keeps each 200 ms poll cheap and bounded.
     const MAX_CHARS: i32 = 2000;
