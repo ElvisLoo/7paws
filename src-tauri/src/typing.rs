@@ -66,7 +66,10 @@ fn classify(code: &str) -> KeyClass {
 fn local_day() -> String {
     #[cfg(windows)]
     {
-        use windows_sys::Win32::System::Time::{GetLocalTime, SYSTEMTIME};
+        // [7paws] GetLocalTime lives under SystemInformation in windows-sys,
+        // while SYSTEMTIME is defined in Foundation.
+        use windows_sys::Win32::Foundation::SYSTEMTIME;
+        use windows_sys::Win32::System::SystemInformation::GetLocalTime;
         let mut st: SYSTEMTIME = unsafe { std::mem::zeroed() };
         unsafe { GetLocalTime(&mut st) };
         return format!("{:04}-{:02}-{:02}", st.wYear, st.wMonth, st.wDay);
