@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { AppSettings, CatInput, CustomCat, PawSide } from "../types";
 import { catAudio } from "../audio";
 import { buildCoatPalette, type CoatPalette } from "./catPalette";
+import { describePetState } from "./statusLabels";
 
 type Region = [number, number, number, number];
 
@@ -23,6 +24,7 @@ interface RefCatApi {
   setLayout(layout: string): void;
   setAfterRender(callback: (() => void) | null): void;
   captureFrame(opacity: number): ImageData | null;
+  fastForwardToSleep(): void;
   destroy(): void;
 }
 
@@ -55,6 +57,7 @@ const REQUIRED_API_METHODS = [
   "setLayout",
   "setAfterRender",
   "captureFrame",
+  "fastForwardToSleep",
   "destroy",
 ] as const;
 
@@ -88,6 +91,8 @@ export class SevenPawsPet {
   private lastFrameAt = 0;
   private debugCaptureLogged = false;
   private debugErrorLogged = false;
+  private onStatus?: (label: string | null) => void;
+  private lastStatusLabel: string | null = null;
 
   constructor(
     host: HTMLElement,
@@ -95,6 +100,7 @@ export class SevenPawsPet {
     cats: CustomCat[],
     onRegions: (regions: Region[]) => void,
     win7Mode = false,
+    onStatus?: (label: string | null) => void,
   ) {
     this.win7Mode = win7Mode;
     if (!window.createCat) throw new Error("Reference cat renderer is missing");
@@ -116,6 +122,7 @@ export class SevenPawsPet {
     this.cats = cats;
     this.layout = settings.keyboardLayout;
     this.onRegions = onRegions;
+    this.onStatus = onStatus;
 
     catAudio.setEnabled(settings.purrPet || settings.purrSleep);
     this.applyOptions(settings);
@@ -132,6 +139,7 @@ export class SevenPawsPet {
           : 0;
       catAudio.setPurrIntensity(target);
       this.syncRegions();
+      this.syncStatus(state);
     }, 180);
 
     this.refreshHitRegions();
@@ -198,6 +206,16 @@ export class SevenPawsPet {
     return side > 0 ? "R" : "L";
   }
 
+  /** Put the cat to sleep immediately, ignoring the idle timeout. */
+  nap() {
+    this.api.fastForwardToSleep();
+  }
+
+  /** Wake the cat and drop any keys/buttons still held down. */
+  wake() {
+    this.clearInput();
+  }
+
   applySettings(next: AppSettings, cats: CustomCat[]) {
     const prev = this.settings;
     this.settings = next;
@@ -237,6 +255,16 @@ export class SevenPawsPet {
     if (!force && key === this.regionsKey) return;
     this.regionsKey = key;
     this.onRegions(regions);
+  }
+
+  // The bubble only repaints when the label actually changes; while it is off
+  // (or Win7 presents frames outside the DOM) no renderer query happens.
+  private syncStatus(state: string) {
+    if (!this.onStatus || this.win7Mode) return;
+    const label = describePetState(state, this.api.idleAction());
+    if (label === this.lastStatusLabel) return;
+    this.lastStatusLabel = label;
+    this.onStatus(label);
   }
 
   hitRegions(): Region[] {

@@ -468,6 +468,7 @@ fn update_settings(
         s.sleep_minutes = patch.sleep_minutes;
         s.idle_actions = patch.idle_actions;
         s.show_key_labels = patch.show_key_labels;
+        s.show_status_bubble = patch.show_status_bubble;
         s.keyboard_layout = patch.keyboard_layout;
         s.show_tray_icon = patch.show_tray_icon;
         s.mcp_enabled = patch.mcp_enabled;

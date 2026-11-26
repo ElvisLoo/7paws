@@ -17,6 +17,7 @@ export const defaultSettings: AppSettings = {
   sleepMinutes: 5,
   idleActions: true,
   showKeyLabels: true,
+  showStatusBubble: true,
   keyboardLayout: "65",
   showTrayIcon: true,
   mcpEnabled: true,

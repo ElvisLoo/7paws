@@ -30,6 +30,7 @@ const purrPetInput = document.getElementById("purrPet") as HTMLInputElement;
 const purrSleepInput = document.getElementById("purrSleep") as HTMLInputElement;
 const idleActionsInput = document.getElementById("idleActions") as HTMLInputElement;
 const labelsInput = document.getElementById("showKeyLabels") as HTMLInputElement;
+const statusBubbleInput = document.getElementById("showStatusBubble") as HTMLInputElement;
 const reminderEnabledInput = document.getElementById("reminderEnabled") as HTMLInputElement;
 const reminderTextInput = document.getElementById("reminderText") as HTMLInputElement;
 const reminderIntervalInput = document.getElementById("reminderInterval") as HTMLInputElement;
@@ -87,6 +88,7 @@ const REQUIRED_DOM_IDS = [
   "purrSleep",
   "idleActions",
   "showKeyLabels",
+  "showStatusBubble",
   "reminderEnabled",
   "reminderText",
   "reminderInterval",
@@ -847,6 +849,7 @@ function syncControls() {
   purrSleepInput.checked = settings.purrSleep;
   idleActionsInput.checked = settings.idleActions;
   labelsInput.checked = settings.showKeyLabels;
+  statusBubbleInput.checked = settings.showStatusBubble;
   reminderEnabledInput.checked = settings.reminderEnabled;
   if (document.activeElement !== reminderTextInput) reminderTextInput.value = settings.reminderText;
   if (document.activeElement !== reminderIntervalInput) {
@@ -1130,6 +1133,9 @@ function bindControls() {
   });
   labelsInput.addEventListener("change", () => {
     void saveSettings({ showKeyLabels: labelsInput.checked });
+  });
+  statusBubbleInput.addEventListener("change", () => {
+    void saveSettings({ showStatusBubble: statusBubbleInput.checked });
   });
 
   reminderEnabledInput.addEventListener("change", () => {
