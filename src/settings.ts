@@ -239,7 +239,9 @@ type McpClientId =
   | "pi"
   | "cherryStudio"
   | "workbuddy"
-  | "antigravity";
+  | "antigravity"
+  | "catPaw"
+  | "loomy";
 
 interface McpClient {
   id: McpClientId;
@@ -264,6 +266,8 @@ const MCP_CLIENTS: McpClient[] = [
   { id: "cherryStudio", name: "Cherry Studio", location: "Settings → MCP Servers" },
   { id: "workbuddy", name: "WorkBuddy", location: "~/.workbuddy/mcp.json" },
   { id: "antigravity", name: "Antigravity", location: "~/.gemini/config/mcp_config.json" },
+  { id: "catPaw", name: "妙手 CatPaw", location: "应用内 MCP 设置（账户级配置）" },
+  { id: "loomy", name: "Loomy", location: "设置 → 工具箱 → 添加外部 MCP" },
 ];
 
 let mcpClient: McpClientId = "qoder";
@@ -321,6 +325,29 @@ function mcpSnippet(id: McpClientId): string {
     case "opencode":
       return JSON.stringify(
         { mcp: { "7paws": { type: "local", command: [command, "--mcp"] } } },
+        null,
+        2,
+      );
+    case "catPaw":
+      return JSON.stringify(
+        {
+          profile: { transport: "stdio", authType: "none", source: { kind: "manual" } },
+          connection: { command, args },
+          enabled: true,
+          keepSecrets: [],
+        },
+        null,
+        2,
+      );
+    case "loomy":
+      return JSON.stringify(
+        {
+          mcp: {
+            servers: {
+              "7paws": { type: "stdio", command, args, trust: "trusted" },
+            },
+          },
+        },
         null,
         2,
       );
