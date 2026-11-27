@@ -1,13 +1,19 @@
-//! Reads text that has been committed into the focused edit field through UI
-//! Automation, so the pet can show real characters (Chinese from WeType or any
-//! other IME) instead of raw keycodes, and count those characters as words.
+//! Reads text committed into the focused edit field through UI Automation so
+//! the pet can show real characters (Chinese from WeType or any other IME)
+//! instead of raw keycodes, and count Han characters as words.
 //!
 //! Windows only: IMEs such as WeType are pure TSF and expose nothing through
-//! IMM32, while UI Automation reads committed text cross-process without
+//! IMM32, while UI Automation reads the focused control cross-process without
 //! injection or elevation. On other platforms this module is a no-op.
 //!
-//! Privacy: the watcher counts non-whitespace characters only and never stores
-//! or forwards the text itself; password fields are skipped entirely, and the
+//! Only TextPattern is used, and only Han ideographs plus CJK punctuation are
+//! kept. Chromium/WebView-style fields expose the raw composition buffer
+//! (pinyin) between keystrokes, so filtering out everything else makes the
+//! watcher show committed text only; ValuePattern is deliberately avoided
+//! because document elements hand back whole-page markup through it.
+//!
+//! Privacy: the watcher counts Han characters only and never stores or
+//! forwards the text itself; password fields are skipped entirely, and the
 //! whole thing stops while privacy mode is enabled.
 
 use std::sync::{Arc, Mutex};
@@ -22,7 +28,7 @@ use windows::Win32::System::Com::{
 #[cfg(windows)]
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationTextPattern,
-    IUIAutomationValuePattern, UIA_TextPatternId, UIA_ValuePatternId,
+    UIA_TextPatternId,
 };
 
 use crate::config::AppSettings;
@@ -78,7 +84,7 @@ fn run(
                 .map(|s| s.compose_tracking_enabled && !s.privacy_mode)
                 .unwrap_or(false);
             let current = if enabled {
-                read_focused_text(&automation, MAX_CHARS)
+                read_focused_text(&automation, MAX_CHARS).as_deref().map(meaningful)
             } else {
                 // Drop the baseline while disabled so re-enabling does not
                 // replay text typed before the toggle.
@@ -89,23 +95,29 @@ fn run(
             match (&baseline, current.as_deref()) {
                 (Some(old), Some(next)) if next == old.as_str() => {}
                 (Some(old), Some(next)) => {
-                    // Only strict appends count as new typing. Edits, cursor
-                    // moves and focus changes reset the baseline silently so
-                    // no phantom text is ever counted.
+                    // Only strict growth of the visible text counts as new
+                    // typing; edits, cursor moves and deletions reset the
+                    // baseline silently so no phantom text is ever shown.
                     if let Some(tail) = next.strip_prefix(old.as_str()) {
-                        let count = tail.chars().filter(|c| !c.is_whitespace()).count() as u64;
-                        if count > 0 {
-                            if let Ok(mut stats) = typing_stats.lock() {
-                                stats.record_composed(count);
+                        if !tail.is_empty() {
+                            let han_count =
+                                tail.chars().filter(|c| is_han(*c)).count() as u64;
+                            if han_count > 0 {
+                                if let Ok(mut stats) = typing_stats.lock() {
+                                    stats.record_composed(han_count);
+                                }
                             }
-                            let _ = app.emit("cat-composed", ComposedPayload { text: tail.to_string() });
+                            let _ = app.emit(
+                                "cat-composed",
+                                ComposedPayload { text: tail.to_string() },
+                            );
                         }
                     }
                     baseline = Some(next.to_string());
                 }
                 (None, Some(next)) => {
                     // First observation after (re)focusing a field: establish
-                    // the baseline without counting the pre-existing text.
+                    // the baseline without counting pre-existing text.
                     baseline = Some(next.to_string());
                 }
                 (_, None) => {
@@ -129,7 +141,9 @@ unsafe fn read_focused_text(automation: &IUIAutomation, max_chars: i32) -> Optio
         return None;
     }
 
-    // Edit/Document controls expose the whole content through TextPattern.
+    // Edit/Document controls expose their content through TextPattern; some
+    // also carry ValuePattern, but its value is page markup for documents, so
+    // it is intentionally not consulted.
     if let Ok(pattern) = element.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId) {
         if let Ok(range) = pattern.DocumentRange() {
             if let Ok(text) = range.GetText(max_chars) {
@@ -138,12 +152,27 @@ unsafe fn read_focused_text(automation: &IUIAutomation, max_chars: i32) -> Optio
         }
     }
 
-    // Fallback for controls that only implement ValuePattern.
-    if let Ok(pattern) = element.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId) {
-        if let Ok(value) = pattern.CurrentValue() {
-            return Some(value.to_string());
-        }
-    }
-
     None
+}
+
+/// Han ideographs plus CJK punctuation: what the pet ends up showing. Raw IME
+/// syllables (pinyin letters, apostrophe separators) are dropped here.
+fn meaningful(text: &str) -> String {
+    text.chars()
+        .filter(|c| is_han(*c) || is_cjk_punctuation(*c))
+        .collect()
+}
+
+fn is_han(c: char) -> bool {
+    matches!(
+        c,
+        '\u{3400}'..='\u{4DBF}' | '\u{4E00}'..='\u{9FFF}' | '\u{F900}'..='\u{FAFF}'
+    )
+}
+
+fn is_cjk_punctuation(c: char) -> bool {
+    matches!(
+        c,
+        '\u{3000}'..='\u{303F}' | '\u{FF01}'..='\u{FF65}' | '\u{FFE0}'..='\u{FFE6}'
+    )
 }
