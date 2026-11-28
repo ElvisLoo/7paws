@@ -46,6 +46,10 @@ const typingTotalEl = document.getElementById("typingTotal") as HTMLSpanElement;
 const typingLettersEl = document.getElementById("typingLetters") as HTMLSpanElement;
 const typingDigitsEl = document.getElementById("typingDigits") as HTMLSpanElement;
 const typingFunctionKeysEl = document.getElementById("typingFunctionKeys") as HTMLSpanElement;
+const mouseTodayEl = document.getElementById("mouseToday") as HTMLSpanElement;
+const mouseTotalEl = document.getElementById("mouseTotal") as HTMLSpanElement;
+const wheelTodayEl = document.getElementById("wheelToday") as HTMLSpanElement;
+const wheelTotalEl = document.getElementById("wheelTotal") as HTMLSpanElement;
 const typingResetBtn = document.getElementById("typingResetBtn") as HTMLButtonElement;
 const mcpEnabledInput = document.getElementById("mcpEnabled") as HTMLInputElement;
 const mcpClientSelect = document.getElementById("mcpClientSelect") as HTMLButtonElement;
@@ -111,6 +115,10 @@ const REQUIRED_DOM_IDS = [
   "typingLetters",
   "typingDigits",
   "typingFunctionKeys",
+  "mouseToday",
+  "mouseTotal",
+  "wheelToday",
+  "wheelTotal",
   "typingResetBtn",
   "mcpEnabled",
   "mcpClientSelect",
@@ -234,6 +242,19 @@ function renderTypingStats() {
   typingLettersEl.textContent = fmt(stats?.letters ?? 0);
   typingDigitsEl.textContent = fmt(stats?.digits ?? 0);
   typingFunctionKeysEl.textContent = fmt(stats?.functionKeys ?? 0);
+  mouseTodayEl.textContent = fmtDistance(stats?.todayMouseDistancePx ?? 0);
+  mouseTotalEl.textContent = fmtDistance(stats?.mouseDistancePx ?? 0);
+  wheelTodayEl.textContent = fmt(stats?.todayMouseWheel ?? 0);
+  wheelTotalEl.textContent = fmt(stats?.mouseWheel ?? 0);
+}
+
+/// Raw screen pixels to a rough metric length at the Windows default of
+/// 96 DPI. Real travel depends on the monitor's physical DPI, so this is an
+/// estimate for display only; the raw pixel count stays the source of truth.
+function fmtDistance(px: number): string {
+  const meters = (px * 2.54) / 96 / 100;
+  if (meters >= 1) return `${meters.toFixed(1)} m`;
+  return `${Math.round(meters * 100)} cm`;
 }
 
 interface Choice {

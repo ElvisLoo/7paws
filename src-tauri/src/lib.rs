@@ -2,6 +2,7 @@
 
 mod cats;
 mod config;
+mod bridge;
 mod input_hook;
 mod keymap;
 #[cfg(target_os = "macos")]
@@ -1370,6 +1371,7 @@ fn run_inner(_restarting: bool) {
                 settings_setup.clone(),
                 typing_stats.clone(),
             );
+            bridge::start(typing_stats.clone(), settings_setup.clone());
             #[cfg(windows)]
             windows_zorder::start_guard(handle.clone(), settings_setup.clone(), drag_setup.clone());
             start_hit_test_loop(

@@ -58,10 +58,16 @@ export interface TypingStats {
   letters: number;
   digits: number;
   functionKeys: number;
+  /** Lifetime pointer travel in raw screen pixels. */
+  mouseDistancePx: number;
+  /** Lifetime wheel detents (one notch per 120 units on Windows). */
+  mouseWheel: number;
   todayTotal: number;
   todayLetters: number;
   todayDigits: number;
   todayFunctionKeys: number;
+  todayMouseDistancePx: number;
+  todayMouseWheel: number;
   day: string;
 }
 

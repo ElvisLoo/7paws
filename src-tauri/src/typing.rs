@@ -4,9 +4,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-/// Keystroke counters by class (letters / digits / function keys). The app
-/// never records which keys were pressed, only how many. Counters live next to
-/// settings.json and survive restarts.
+/// Keystroke counters by class (letters / digits / function keys) plus mouse
+/// activity (pointer travel in raw pixels and wheel notches). The app never
+/// records which keys were pressed or where the pointer was, only how many /
+/// how far. Counters live next to settings.json and survive restarts.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct TypingStats {
@@ -14,10 +15,17 @@ pub struct TypingStats {
     pub letters: u64,
     pub digits: u64,
     pub function_keys: u64,
+    /// Pointer travel from the global move hook, in raw screen pixels;
+    /// diagonal moves count their hypotenuse.
+    pub mouse_distance_px: u64,
+    /// Wheel notches (one notch = a 120-unit detent on Windows).
+    pub mouse_wheel: u64,
     pub today_total: u64,
     pub today_letters: u64,
     pub today_digits: u64,
     pub today_function_keys: u64,
+    pub today_mouse_distance_px: u64,
+    pub today_mouse_wheel: u64,
     /// Local calendar day (YYYY-MM-DD) that the today_* counters belong to.
     pub day: String,
     /// Transient: counters changed since the last successful disk write.
@@ -112,6 +120,8 @@ impl TypingStats {
             self.today_letters = 0;
             self.today_digits = 0;
             self.today_function_keys = 0;
+            self.today_mouse_distance_px = 0;
+            self.today_mouse_wheel = 0;
         }
         self.total += 1;
         self.today_total += 1;
@@ -131,6 +141,48 @@ impl TypingStats {
             KeyClass::Other => {}
         }
         self.dirty = true;
+    }
+
+    /// Adds pointer travel to the mouse counters. `dx`/`dy` are raw screen
+    /// pixels between two hook events; the distance is their hypotenuse.
+    pub fn record_mouse_move(&mut self, dx: i32, dy: i32) {
+        if dx == 0 && dy == 0 {
+            return;
+        }
+        let pixels = ((dx as f64).hypot(dy as f64)) as u64;
+        if pixels == 0 {
+            return;
+        }
+        self.ensure_today();
+        self.mouse_distance_px += pixels;
+        self.today_mouse_distance_px += pixels;
+        self.dirty = true;
+    }
+
+    /// Counts wheel detents. Windows reports ±120 per notch, so anything less
+    /// than a full detent still counts as one scroll step.
+    pub fn record_wheel(&mut self, delta: i32) {
+        let notches = (delta.unsigned_abs() / 120).max(1);
+        self.ensure_today();
+        self.mouse_wheel += notches;
+        self.today_mouse_wheel += notches;
+        self.dirty = true;
+    }
+
+    /// Rolls the today_* counters over when the local calendar day changes,
+    /// without touching the lifetime totals. Callers that add counters call
+    /// this first so no reset window is missed between events.
+    fn ensure_today(&mut self) {
+        let day = local_day();
+        if self.day != day {
+            self.day = day;
+            self.today_total = 0;
+            self.today_letters = 0;
+            self.today_digits = 0;
+            self.today_function_keys = 0;
+            self.today_mouse_distance_px = 0;
+            self.today_mouse_wheel = 0;
+        }
     }
 
     pub fn reset(&mut self) {

@@ -81,7 +81,7 @@
 
         <div class="menu-section">
           <div class="menu-label">打字统计</div>
-          <label class="toggle-row" for="typingStatsEnabled" title="只统计字母、数字与 F 功能键的数量，不记录具体按了什么">
+          <label class="toggle-row" for="typingStatsEnabled" title="只统计字母、数字与 F 功能键的数量，以及鼠标移动距离和滚轮格数；不记录具体按了什么、也不记录鼠标位置">
             <span>开启打字统计</span>
             <input id="typingStatsEnabled" type="checkbox" />
           </label>
@@ -91,6 +91,10 @@
             <div class="typing-row"><span>字母</span><span id="typingLetters">0</span></div>
             <div class="typing-row"><span>数字</span><span id="typingDigits">0</span></div>
             <div class="typing-row"><span>功能键</span><span id="typingFunctionKeys">0</span></div>
+            <div class="typing-row"><span>鼠标·今日</span><span id="mouseToday">0 m</span></div>
+            <div class="typing-row"><span>鼠标·累计</span><span id="mouseTotal">0 m</span></div>
+            <div class="typing-row"><span>滚轮·今日</span><span id="wheelToday">0</span></div>
+            <div class="typing-row"><span>滚轮·累计</span><span id="wheelTotal">0</span></div>
           </div>
           <button id="typingResetBtn" class="btn ghost typing-reset" type="button">清零统计</button>
         </div>

@@ -5,7 +5,7 @@
   <p><a href="https://elvisloo.github.io/7paws/">介绍站</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws">GitHub</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/releases">下载</a> &nbsp;|&nbsp; <a href="https://github.com/ElvisLoo/7paws/issues">反馈</a></p>
 </div>
 
-<p align="center">本仓库是 <a href="https://github.com/7wdn/7paws">7wdn/7paws</a> 的增强分支，由 <a href="https://github.com/ElvisLoo">ElvisLoo</a> 维护：在跟进上游的同时补充健壮性加固与新功能（托盘小憩/唤醒、状态气泡等），当前版本 v0.5.0。项目单页介绍站（GitHub Pages）：<a href="https://elvisloo.github.io/7paws/">https://elvisloo.github.io/7paws/</a></p>
+<p align="center">本仓库是 <a href="https://github.com/7wdn/7paws">7wdn/7paws</a> 的增强分支，由 <a href="https://github.com/ElvisLoo">ElvisLoo</a> 维护：在跟进上游的同时补充健壮性加固与新功能（托盘小憩/唤醒、状态气泡等），当前版本 v0.6.4。项目单页介绍站（GitHub Pages）：<a href="https://elvisloo.github.io/7paws/">https://elvisloo.github.io/7paws/</a></p>
 
 <div align="center">
   <a href="https://elvisloo.github.io/7paws/"><img src="https://img.shields.io/badge/website-elvisloo.github.io%2F7paws-6a7a45?style=flat-square" alt="Website" /></a>
@@ -70,6 +70,7 @@
 - **直播绿幕** — 设置里一键给小猫窗口铺上绿幕、蓝幕或品红幕，OBS 或直播姬直接窗口捕获加色度键即可；单窗口实现，macOS 同样可用。
 - **隐私模式** — 只保留左右手动作提示，不显示具体按键。
 - **设置持久化** — 毛色、大小、布局、睡眠时间和各项开关保存到本地。
+- **活动统计（仅本地）** — 设置页里可查看今日与累计的打字数量、鼠标移动距离和滚轮格数，数据只保存在本机。同时会生成 `%APPDATA%\7paws\status.json`（macOS/Linux 在对应的数据目录），其他本地程序可直接读取，例如本作者的「牛马鼓励器」就能拿到你今天敲了多少键、鼠标走了多远；文件采用原子写入，读取方不会读到写了一半的内容。
 - **检查更新** — 设置窗口右上角点一次，与 GitHub 最新 Release 对比版本，有新版时引导到发布页。
 
 ## 下载安装
