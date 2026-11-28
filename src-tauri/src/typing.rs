@@ -4,11 +4,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-/// Keystroke counters by class (letters / digits / function keys) plus the
-/// characters IMEs commit into edit fields. The app never records which keys
-/// were pressed, only how many; composed text is counted per character without
-/// being stored anywhere. Counters live next to settings.json and survive
-/// restarts.
+/// Keystroke counters by class (letters / digits / function keys). The app
+/// never records which keys were pressed, only how many. Counters live next to
+/// settings.json and survive restarts.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct TypingStats {
@@ -16,14 +14,10 @@ pub struct TypingStats {
     pub letters: u64,
     pub digits: u64,
     pub function_keys: u64,
-    /// Characters committed into an edit field (IME output such as Chinese),
-    /// counted by the UI Automation watcher. Not key presses.
-    pub composed: u64,
     pub today_total: u64,
     pub today_letters: u64,
     pub today_digits: u64,
     pub today_function_keys: u64,
-    pub today_composed: u64,
     /// Local calendar day (YYYY-MM-DD) that the today_* counters belong to.
     pub day: String,
     /// Transient: counters changed since the last successful disk write.
@@ -118,7 +112,6 @@ impl TypingStats {
             self.today_letters = 0;
             self.today_digits = 0;
             self.today_function_keys = 0;
-            self.today_composed = 0;
         }
         self.total += 1;
         self.today_total += 1;
@@ -137,27 +130,6 @@ impl TypingStats {
             }
             KeyClass::Other => {}
         }
-        self.dirty = true;
-    }
-
-    /// Counts characters committed by an IME into the focused edit field.
-    /// `count` is non-whitespace characters only; callers never pass text in,
-    /// matching the key counters' "counts, not content" rule.
-    pub fn record_composed(&mut self, count: u64) {
-        if count == 0 {
-            return;
-        }
-        let day = local_day();
-        if self.day != day {
-            self.day = day;
-            self.today_total = 0;
-            self.today_letters = 0;
-            self.today_digits = 0;
-            self.today_function_keys = 0;
-            self.today_composed = 0;
-        }
-        self.composed += count;
-        self.today_composed += count;
         self.dirty = true;
     }
 

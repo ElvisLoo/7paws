@@ -12,8 +12,6 @@ mod mcp;
 mod reminder;
 mod tray;
 mod typing;
-#[cfg(windows)]
-mod uia_compose;
 #[cfg(all(windows, feature = "win7"))]
 mod win7;
 #[cfg(windows)]
@@ -516,7 +514,6 @@ fn update_settings(
         s.show_key_labels = patch.show_key_labels;
         s.show_status_bubble = patch.show_status_bubble;
         s.typing_stats_enabled = patch.typing_stats_enabled;
-        s.compose_tracking_enabled = patch.compose_tracking_enabled;
         s.keyboard_layout = patch.keyboard_layout;
         s.capture_background = patch.capture_background;
         s.stream_green_screen = patch.stream_green_screen;
@@ -1369,12 +1366,6 @@ fn run_inner(_restarting: bool) {
 
             tray::setup_tray(&handle, settings_setup.clone())?;
             input_hook::start_global_hooks(
-                handle.clone(),
-                settings_setup.clone(),
-                typing_stats.clone(),
-            );
-            #[cfg(windows)]
-            uia_compose::start(
                 handle.clone(),
                 settings_setup.clone(),
                 typing_stats.clone(),

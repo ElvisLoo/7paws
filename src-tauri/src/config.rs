@@ -49,11 +49,6 @@ pub struct AppSettings {
     pub show_key_labels: bool,
     pub show_status_bubble: bool,
     pub typing_stats_enabled: bool,
-    /// Read committed text from the focused edit field (IME output, e.g.
-    /// Chinese) via UI Automation and show/count it. Windows only; silently off
-    /// elsewhere and while privacy mode is on.
-    #[serde(default = "default_true")]
-    pub compose_tracking_enabled: bool,
     pub keyboard_layout: String,
     pub capture_background: String,
     pub stream_green_screen: bool,
@@ -86,7 +81,6 @@ impl Default for AppSettings {
             show_key_labels: true,
             show_status_bubble: true,
             typing_stats_enabled: true,
-            compose_tracking_enabled: true,
             keyboard_layout: "65".to_string(),
             capture_background: "green".to_string(),
             stream_green_screen: false,

@@ -7,7 +7,7 @@ import { COATS } from "./pet/coats";
 import { ReminderController } from "./reminder.ts";
 import { defaultSettings } from "./defaults";
 import { CAPTURE_BACKGROUNDS } from "./captureBackgrounds";
-import type { AppSettings, CatInput, CustomCat, TypingStats } from "./types";
+import type { AppSettings, CatInput, CustomCat } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
 
@@ -19,11 +19,6 @@ let customCats: CustomCat[] = [];
 let scene: SevenPawsPet;
 let win7Mode = false;
 let statusBubble: HTMLDivElement | null = null;
-let typingBadge: HTMLDivElement | null = null;
-let composeBubble: HTMLDivElement | null = null;
-let composeText = "";
-let composeHideTimer: number | null = null;
-let typingStats: TypingStats | null = null;
 const reminder = new ReminderController((text) => {
   if (isTauri && settings.reminderTextEnabled) {
     void invoke("show_reminder_bubble", { text }).catch(() => undefined);
@@ -39,41 +34,6 @@ function setStatusLabel(label: string | null) {
   }
   if (statusBubble.textContent !== label) statusBubble.textContent = label;
   statusBubble.hidden = false;
-}
-
-function syncTypingBadge() {
-  if (!typingBadge) return;
-  const stats = typingStats;
-  const show = settings.typingStatsEnabled && stats !== null;
-  typingBadge.hidden = !show;
-  if (!stats) return;
-  const text = `⌨ 今日 ${stats.todayTotal.toLocaleString("zh-CN")}`;
-  if (typingBadge.textContent !== text) typingBadge.textContent = text;
-}
-
-function hideComposed() {
-  composeText = "";
-  if (composeHideTimer !== null) {
-    window.clearTimeout(composeHideTimer);
-    composeHideTimer = null;
-  }
-  if (composeBubble) composeBubble.hidden = true;
-}
-
-/** Text committed by an IME into the focused field; appended while typing. */
-function showComposed(text: string) {
-  if (!composeBubble) return;
-  if (!settings.composeTrackingEnabled || settings.privacyMode) {
-    hideComposed();
-    return;
-  }
-  if (!text.trim()) return;
-  composeText += text;
-  const display = composeText.length > 48 ? `…${composeText.slice(-48)}` : composeText;
-  if (composeBubble.textContent !== display) composeBubble.textContent = display;
-  composeBubble.hidden = false;
-  if (composeHideTimer !== null) window.clearTimeout(composeHideTimer);
-  composeHideTimer = window.setTimeout(hideComposed, 3200);
 }
 
 function syncReminder() {
@@ -177,11 +137,6 @@ async function boot() {
     } catch {
       customCats = [];
     }
-    try {
-      typingStats = await invoke<TypingStats>("get_typing_stats");
-    } catch {
-      typingStats = null;
-    }
   }
 
   if (isTauri) {
@@ -205,16 +160,6 @@ async function boot() {
       statusBubble.className = "status-bubble";
       statusBubble.hidden = true;
       stage.appendChild(statusBubble);
-      typingBadge = document.createElement("div");
-      typingBadge.id = "typingBadge";
-      typingBadge.className = "typing-bubble";
-      typingBadge.hidden = true;
-      stage.appendChild(typingBadge);
-      composeBubble = document.createElement("div");
-      composeBubble.id = "composeBubble";
-      composeBubble.className = "compose-bubble";
-      composeBubble.hidden = true;
-      stage.appendChild(composeBubble);
     }
     scene = new SevenPawsPet(stage, sceneSettings(), customCats, (regions) => {
       if (isTauri) void invoke("set_hit_regions", { regions });
@@ -232,7 +177,6 @@ async function boot() {
   bindPointer();
   listenGlobalKeysForDev();
   syncReminder();
-  syncTypingBadge();
 
   document.addEventListener("contextmenu", (event) => {
     event.preventDefault();
@@ -268,15 +212,8 @@ async function boot() {
       applyStreamBackdrop();
       scene.applySettings(sceneSettings(), customCats);
       syncReminder();
-      syncTypingBadge();
-      if (!settings.composeTrackingEnabled || settings.privacyMode) hideComposed();
       if (!settings.showStatusBubble && statusBubble) statusBubble.hidden = true;
     });
-    await listen<TypingStats>("cat-typing-stats", (ev) => {
-      typingStats = ev.payload;
-      syncTypingBadge();
-    });
-    await listen<{ text: string }>("cat-composed", (ev) => showComposed(ev.payload.text));
     await listen<string>("cat-sleep", (ev) => {
       if (ev.payload === "sleep") scene.nap();
       else if (ev.payload === "wake") scene.wake();
