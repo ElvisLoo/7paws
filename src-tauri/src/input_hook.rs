@@ -131,6 +131,7 @@ pub fn start_global_hooks(
         let mut last_mouse_xy: Option<(i32, i32)> = None;
         // Raw pointer position kept separately from the render-throttled
         // last_mouse_xy so the distance counter does not lose sub-33 ms moves.
+        #[cfg(windows)]
         let mut last_stats_xy: Option<(i32, i32)> = None;
         let mut last_typing_save = Instant::now() - Duration::from_secs(10);
         let mut last_typing_emit: Option<TypingStats> = None;
@@ -248,25 +249,31 @@ pub fn start_global_hooks(
                     );
                 }
                 RawHookMsg::MouseMoved { x, y } => {
-                    // Mouse counters share the keystroke gate: privacy mode
-                    // stops all activity tracking, and so does the settings
-                    // toggle. Only travel is accumulated, never positions.
-                    let (privacy, tracking) = settings
-                        .lock()
-                        .map(|s| (s.privacy_mode, s.typing_stats_enabled))
-                        .unwrap_or((false, false));
-                    if !privacy && tracking {
-                        if let Some((lx, ly)) = last_stats_xy {
-                            let dx = x - lx;
-                            let dy = y - ly;
-                            if dx != 0 || dy != 0 {
-                                if let Ok(mut stats) = typing_stats.lock() {
-                                    stats.record_mouse_move(dx, dy);
+                    // The macOS tap reports no coordinates (it sends 0,0), so
+                    // distance is only meaningful — and only counted — on
+                    // Windows, where the hook gets real screen points.
+                    #[cfg(windows)]
+                    {
+                        // Mouse counters share the keystroke gate: privacy mode
+                        // stops all activity tracking, and so does the settings
+                        // toggle. Only travel is accumulated, never positions.
+                        let (privacy, tracking) = settings
+                            .lock()
+                            .map(|s| (s.privacy_mode, s.typing_stats_enabled))
+                            .unwrap_or((false, false));
+                        if !privacy && tracking {
+                            if let Some((lx, ly)) = last_stats_xy {
+                                let dx = x - lx;
+                                let dy = y - ly;
+                                if dx != 0 || dy != 0 {
+                                    if let Ok(mut stats) = typing_stats.lock() {
+                                        stats.record_mouse_move(dx, dy);
+                                    }
                                 }
                             }
                         }
+                        last_stats_xy = Some((x, y));
                     }
-                    last_stats_xy = Some((x, y));
                     // Windows/macOS sensor jitter otherwise wakes a resting cat and keeps it at full FPS.
                     // macOS reports 0,0 here, so the filter only applies where the point is real.
                     #[cfg(windows)]
