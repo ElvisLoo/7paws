@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { COATS } from "./pet/coats";
 import { defaultSettings } from "./defaults";
+import { CAPTURE_BACKGROUNDS } from "./captureBackgrounds";
 import type { AppSettings, CatPattern, CatSpot, CustomCat, TypingStats } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
@@ -19,6 +20,10 @@ const sleepSelect = document.getElementById("sleepSelect") as HTMLButtonElement;
 const layoutSelect = document.getElementById("layoutSelect") as HTMLButtonElement;
 const sleepLabel = sleepSelect.querySelector(".dropdown-label") as HTMLSpanElement;
 const layoutLabel = layoutSelect.querySelector(".dropdown-label") as HTMLSpanElement;
+const captureBackgroundSelect = document.getElementById("captureBackgroundSelect") as HTMLButtonElement;
+const captureBackgroundLabel = captureBackgroundSelect.querySelector(".dropdown-label") as HTMLSpanElement;
+const captureBackgroundDot = document.getElementById("captureBackgroundDot") as HTMLSpanElement;
+const streamGreenScreenInput = document.getElementById("streamGreenScreen") as HTMLInputElement;
 const leftMouseInput = document.getElementById("leftMouse") as HTMLInputElement;
 const alwaysOnTopInput = document.getElementById("alwaysOnTop") as HTMLInputElement;
 const clickThroughLockedInput = document.getElementById("clickThroughLocked") as HTMLInputElement;
@@ -32,6 +37,7 @@ const idleActionsInput = document.getElementById("idleActions") as HTMLInputElem
 const labelsInput = document.getElementById("showKeyLabels") as HTMLInputElement;
 const statusBubbleInput = document.getElementById("showStatusBubble") as HTMLInputElement;
 const reminderEnabledInput = document.getElementById("reminderEnabled") as HTMLInputElement;
+const reminderTextEnabledInput = document.getElementById("reminderTextEnabled") as HTMLInputElement;
 const reminderTextInput = document.getElementById("reminderText") as HTMLInputElement;
 const reminderIntervalInput = document.getElementById("reminderInterval") as HTMLInputElement;
 const typingStatsEnabledInput = document.getElementById("typingStatsEnabled") as HTMLInputElement;
@@ -246,6 +252,7 @@ interface Choice {
 
 const layoutChoices: Choice[] = [
   { value: "65", label: "65% 紧凑" },
+  { value: "98", label: "98 键紧凑" },
   { value: "104", label: "104 键全尺寸" },
 ];
 const sleepChoices: Choice[] = [
@@ -288,7 +295,7 @@ interface McpClient {
   location: string;
 }
 
-// Same clients and order as SevenShell: Qoder first with a 荐 badge.
+// Qoder is listed first.
 const MCP_CLIENTS: McpClient[] = [
   { id: "qoder", name: "Qoder", location: "~/.qoder/mcp.json" },
   { id: "claudeCode", name: "Claude Code", location: ".mcp.json" },
@@ -905,6 +912,11 @@ function syncControls() {
     ?? `${settings.sleepMinutes} 分钟`;
   layoutLabel.textContent = layoutChoices.find((c) => c.value === settings.keyboardLayout)?.label
     ?? settings.keyboardLayout;
+  const background = CAPTURE_BACKGROUNDS.find((c) => c.value === settings.captureBackground)
+    ?? CAPTURE_BACKGROUNDS[0];
+  captureBackgroundLabel.textContent = background.label;
+  captureBackgroundDot.style.background = background.color;
+  streamGreenScreenInput.checked = settings.streamGreenScreen;
   leftMouseInput.checked = settings.leftMouse;
   alwaysOnTopInput.checked = settings.alwaysOnTop;
   clickThroughLockedInput.checked = settings.clickThroughLocked;
@@ -921,6 +933,7 @@ function syncControls() {
   composeTrackingEnabledInput.checked = settings.composeTrackingEnabled;
   renderTypingStats();
   reminderEnabledInput.checked = settings.reminderEnabled;
+  reminderTextEnabledInput.checked = settings.reminderTextEnabled;
   if (document.activeElement !== reminderTextInput) reminderTextInput.value = settings.reminderText;
   if (document.activeElement !== reminderIntervalInput) {
     reminderIntervalInput.value = String(settings.reminderIntervalMinutes);
@@ -1172,8 +1185,24 @@ function bindControls() {
       layoutSelect,
       layoutChoices,
       () => settings.keyboardLayout,
-      (value) => void saveSettings({ keyboardLayout: value === "104" ? "104" : "65" }),
+      (value) => void saveSettings({ keyboardLayout: value === "104" ? "104" : value === "98" ? "98" : "65" }),
     );
+  });
+
+  captureBackgroundSelect.addEventListener("click", () => {
+    openDropdown(
+      captureBackgroundSelect,
+      CAPTURE_BACKGROUNDS,
+      () => settings.captureBackground,
+      (value) => {
+        const background = CAPTURE_BACKGROUNDS.find((c) => c.value === value);
+        if (background) void saveSettings({ captureBackground: background.value });
+      },
+    );
+  });
+
+  streamGreenScreenInput.addEventListener("change", () => {
+    void saveSettings({ streamGreenScreen: streamGreenScreenInput.checked });
   });
 
   leftMouseInput.addEventListener("change", () => {
@@ -1241,6 +1270,9 @@ function bindControls() {
 
   reminderEnabledInput.addEventListener("change", () => {
     void saveSettings({ reminderEnabled: reminderEnabledInput.checked });
+  });
+  reminderTextEnabledInput.addEventListener("change", () => {
+    void saveSettings({ reminderTextEnabled: reminderTextEnabledInput.checked });
   });
   reminderTextInput.addEventListener("input", () => {
     if (reminderTextTimer !== null) window.clearTimeout(reminderTextTimer);

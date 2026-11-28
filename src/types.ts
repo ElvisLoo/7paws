@@ -43,10 +43,13 @@ export interface AppSettings {
   showStatusBubble: boolean;
   typingStatsEnabled: boolean;
   composeTrackingEnabled: boolean;
-  keyboardLayout: "65" | "104";
+  keyboardLayout: "65" | "104" | "98";
+  captureBackground: "green" | "blue" | "magenta";
+  streamGreenScreen: boolean;
   showTrayIcon: boolean;
   mcpEnabled: boolean;
   reminderEnabled: boolean;
+  reminderTextEnabled: boolean;
   reminderText: string;
   reminderIntervalMinutes: number;
 }

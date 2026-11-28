@@ -130,6 +130,114 @@ const KEYS_104 = [
   K('NumpadDecimal', '.', NUM_X + 2, 5.25, 1),
 ];
 
+// 98-key: TKL main block + nav island (Del/Ins/PgUp/PgDn) + numpad, with the
+// arrow cluster tucked into the gap between the main block and the numpad. The
+// F row is one continuous 1u run (no 104-style group gaps) and stops at F12;
+// Del sits at the head of the nav island. The nav keys are a little shorter
+// than a full key, and the short right Ctrl leaves room for the arrows. The
+// numpad's bottom-left cell is empty and "0" sits under "2", as on the
+// reference board.
+const KEYS_98 = [
+  K('Escape', 'Esc', 0, 0, 1, { accent: 'accent' }),
+  K('F1', 'F1', 1, 0),
+  K('F2', 'F2', 2, 0),
+  K('F3', 'F3', 3, 0),
+  K('F4', 'F4', 4, 0),
+  K('F5', 'F5', 5, 0),
+  K('F6', 'F6', 6, 0),
+  K('F7', 'F7', 7, 0),
+  K('F8', 'F8', 8, 0),
+  K('F9', 'F9', 9, 0),
+  K('F10', 'F10', 10, 0),
+  K('F11', 'F11', 11, 0),
+  K('F12', 'F12', 12, 0),
+  K('Backquote', '`', 0, 1.25, 1, { accent: 'plain' }),
+  K('Digit1', '1', 1, 1.25),
+  K('Digit2', '2', 2, 1.25),
+  K('Digit3', '3', 3, 1.25),
+  K('Digit4', '4', 4, 1.25),
+  K('Digit5', '5', 5, 1.25),
+  K('Digit6', '6', 6, 1.25),
+  K('Digit7', '7', 7, 1.25),
+  K('Digit8', '8', 8, 1.25),
+  K('Digit9', '9', 9, 1.25),
+  K('Digit0', '0', 10, 1.25),
+  K('Minus', '-', 11, 1.25),
+  K('Equal', '=', 12, 1.25),
+  K('Backspace', '⌫', 13, 1.25, 2),
+  K('Tab', '⇥', 0, 2.25, 1.5),
+  K('KeyQ', 'Q', 1.5, 2.25),
+  K('KeyW', 'W', 2.5, 2.25),
+  K('KeyE', 'E', 3.5, 2.25),
+  K('KeyR', 'R', 4.5, 2.25),
+  K('KeyT', 'T', 5.5, 2.25),
+  K('KeyY', 'Y', 6.5, 2.25),
+  K('KeyU', 'U', 7.5, 2.25),
+  K('KeyI', 'I', 8.5, 2.25),
+  K('KeyO', 'O', 9.5, 2.25),
+  K('KeyP', 'P', 10.5, 2.25),
+  K('BracketLeft', '[', 11.5, 2.25),
+  K('BracketRight', ']', 12.5, 2.25),
+  K('Backslash', '\\', 13.5, 2.25, 1.5),
+  K('CapsLock', '⇪', 0, 3.25, 1.75),
+  K('KeyA', 'A', 1.75, 3.25),
+  K('KeyS', 'S', 2.75, 3.25),
+  K('KeyD', 'D', 3.75, 3.25),
+  K('KeyF', 'F', 4.75, 3.25),
+  K('KeyG', 'G', 5.75, 3.25),
+  K('KeyH', 'H', 6.75, 3.25),
+  K('KeyJ', 'J', 7.75, 3.25),
+  K('KeyK', 'K', 8.75, 3.25),
+  K('KeyL', 'L', 9.75, 3.25),
+  K('Semicolon', ';', 10.75, 3.25),
+  K('Quote', '\'', 11.75, 3.25),
+  K('Enter', '⏎', 12.75, 3.25, 2.25, { accent: 'accent' }),
+  K('ShiftLeft', '⇧', 0, 4.25, 2.25),
+  K('KeyZ', 'Z', 2.25, 4.25),
+  K('KeyX', 'X', 3.25, 4.25),
+  K('KeyC', 'C', 4.25, 4.25),
+  K('KeyV', 'V', 5.25, 4.25),
+  K('KeyB', 'B', 6.25, 4.25),
+  K('KeyN', 'N', 7.25, 4.25),
+  K('KeyM', 'M', 8.25, 4.25),
+  K('Comma', ',', 9.25, 4.25),
+  K('Period', '.', 10.25, 4.25),
+  K('Slash', '/', 11.25, 4.25),
+  K('ShiftRight', '⇧', 12.25, 4.25, 1.75),
+  K('ControlLeft', 'Ctrl', 0, 5.25, 1.25),
+  K('MetaLeft', 'Win', 1.25, 5.25, 1.25),
+  K('AltLeft', 'Alt', 2.5, 5.25, 1.25),
+  K('Space', '␣', 3.75, 5.25, 6),
+  K('AltRight', 'Alt', 9.75, 5.25, 1.25),
+  K('Fn', 'Fn', 11, 5.25, 1.25),
+  K('ControlRight', 'Ctrl', 12.25, 5.25, 0.6),
+  K('ArrowUp', '↑', 14.1, 4.37, 0.85, { rowSpan: 0.9 }),
+  K('ArrowLeft', '←', 13.2, 5.42, 0.85, { rowSpan: 0.8 }),
+  K('ArrowDown', '↓', 14.1, 5.42, 0.85, { rowSpan: 0.8 }),
+  K('ArrowRight', '→', 15.0, 5.42, 0.9, { rowSpan: 0.8 }),
+  K('Delete', 'Del', 15.6, 0, 1, { rowSpan: 0.9 }),
+  K('Insert', 'Ins', 16.6, 0, 1, { rowSpan: 0.9 }),
+  K('PageUp', 'PgUp', 17.6, 0, 1, { rowSpan: 0.9 }),
+  K('PageDown', 'PgDn', 18.6, 0, 1, { rowSpan: 0.9 }),
+  K('NumLock', 'Num', 15.6, 1.25),
+  K('NumpadDivide', '/', 16.6, 1.25),
+  K('NumpadMultiply', '*', 17.6, 1.25),
+  K('NumpadSubtract', '-', 18.6, 1.25),
+  K('Numpad7', '7', 15.6, 2.25),
+  K('Numpad8', '8', 16.6, 2.25),
+  K('Numpad9', '9', 17.6, 2.25),
+  K('NumpadAdd', '+', 18.6, 2.25, 1, { rowSpan: 2 }),
+  K('Numpad4', '4', 15.6, 3.25),
+  K('Numpad5', '5', 16.6, 3.25),
+  K('Numpad6', '6', 17.6, 3.25),
+  K('Numpad1', '1', 15.6, 4.25),
+  K('Numpad2', '2', 16.6, 4.25),
+  K('Numpad3', '3', 17.6, 4.25),
+  K('NumpadEnter', '↵', 18.6, 4.25, 1, { accent: 'accent', rowSpan: 2 }),
+  K('Numpad0', '0', 16.6, 5.25),
+  K('NumpadDecimal', '.', 17.6, 5.25),
+];
+
 const LAYOUTS = {};
 function buildLayout(id, totalUnits, totalRows, specs) {
   const group = new THREE.Group(); scene.add(group);
@@ -155,12 +263,14 @@ function buildLayout(id, totalUnits, totalRows, specs) {
 }
 buildLayout('65', 15, 5, specsFromRows(ROWS));
 buildLayout('104', 22.7, 6.25, KEYS_104);
+buildLayout('98', 19.6, 6.25, KEYS_98);
 let activeLayout = LAYOUTS['65'];
 let board = activeLayout.group;
 let keys = activeLayout.keys;
 let MOUSE_AT = activeLayout.mouseAt.clone();
 let showKeyboard = true;
 LAYOUTS['104'].group.visible = false;
+LAYOUTS['98'].group.visible = false;
 const mouseGroup = new THREE.Group(); mouseGroup.position.copy(MOUSE_AT); scene.add(mouseGroup);
 // Which paw works the mouse, and which way the desk set is laid out. The picture mirrors its owner: a mouse in the owner's right
 // hand sits on the left of the picture. For a left-handed mouse the keyboard and mouse swap sides, still centred on the cat together.
@@ -175,7 +285,7 @@ function setHanded(leftMouse) {
   MOUSE_AT.copy(activeLayout.mouseAt);
 }
 function applyLayout(id) {
-  const next = id === '104' ? LAYOUTS['104'] : LAYOUTS['65'];
+  const next = LAYOUTS[id] || LAYOUTS['65'];
   if (next === activeLayout) { next.group.visible = showKeyboard; return; }
   [...S.down.keys()].forEach(keyUp);
   shownKeys = new Set(); downAt.clear();
@@ -230,7 +340,8 @@ const head = new THREE.Group(); head.position.set(0, 2.3, 0.1); headFix.add(head
 const TEX = 256, mkTex = () => { const c = document.createElement('canvas'); c.width = c.height = TEX; return { g: c.getContext('2d'), t: new THREE.CanvasTexture(c) }; };
 const bodyTex = mkTex(), headTex = mkTex(); M.body.map = bodyTex.t; M.head = new THREE.MeshBasicMaterial({ map: headTex.t }); M.tail = flat('#101010');
 // u runs round the cat (0.25 = facing the viewer, 0.75 = the back), v runs bottom to top
-const blob = (g, u, v, ru, rv, color, rot = 0) => { g.fillStyle = color; for (const du of [-1, 0, 1]) { g.beginPath(); g.ellipse((u + du) * TEX, (1 - v) * TEX, ru * TEX, rv * TEX, rot, 0, 7); g.fill(); } };
+// [7paws] A fur patch: an ellipse whose rim wobbles so it does not read as a pasted-on shape. u wraps round (0.25 front, 0.75 back), v is bottom to top.
+const lump = (g, u, v, ru, rv, color, rot = 0, wob = 0.1, ph = 0) => { g.fillStyle = color; for (const du of [-1, 0, 1]) { g.beginPath(); for (let i = 0; i <= 48; i++) { const th = i / 48 * Math.PI * 2, k = 1 + wob * (Math.sin(th * 3 + ph) * 0.7 + Math.sin(th * 5 + ph * 1.7) * 0.3), x = Math.cos(th) * ru * k, y = Math.sin(th) * rv * k, xr = x * Math.cos(rot) - y * Math.sin(rot), yr = x * Math.sin(rot) + y * Math.cos(rot), px = (u + du) * TEX + xr * TEX, py = (1 - v) * TEX + yr * TEX; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath(); g.fill(); } };
 function paintCoat(c) {
   const b = bodyTex.g, h = headTex.g, pat = c.pattern || '';
   for (const g of [b, h]) { g.fillStyle = c.fur; g.fillRect(0, 0, TEX, TEX); }
@@ -244,8 +355,12 @@ function paintCoat(c) {
     leaf(h, 0.75, 0.35, 0.75, 0.85, 0.022); leaf(h, 0.68, 0.45, 0.62, 0.72, 0.016); leaf(h, 0.82, 0.45, 0.88, 0.72, 0.016);   // back of the head
   }
   if (pat.includes('calico')) {
-    blob(b, 0.04, 0.42, 0.15, 0.2, c.patchA); blob(b, 0.56, 0.22, 0.13, 0.13, c.patchB); blob(b, 0.78, 0.5, 0.16, 0.22, c.patchB); blob(b, 0.5, 0.56, 0.1, 0.12, c.patchA);
-    blob(h, 0.11, 0.7, 0.13, 0.24, c.patchA, 0.3); blob(h, 0.42, 0.72, 0.11, 0.22, c.patchB, -0.3); blob(h, 0.75, 0.5, 0.2, 0.3, c.patchB);
+    lump(b, 0.04, 0.42, 0.15, 0.2, c.patchA, 0.2, 0.12, 0.6); lump(b, 0.56, 0.22, 0.13, 0.13, c.patchB, 0, 0.14, 2.1); lump(b, 0.78, 0.5, 0.16, 0.22, c.patchB, 0, 0.12, 4.2); lump(b, 0.5, 0.56, 0.1, 0.12, c.patchA, 0, 0.14, 1.3);
+    // Face patches, a big patch over the back, then a cap that wraps the whole crown: at v≈1 the sphere's pole squeezes every u into one point, so a per-patch ellipse always leaves a white ring up top.
+    lump(h, 0.10, 0.70, 0.14, 0.28, c.patchA, 0.3, 0.12, 0.7); lump(h, 0.41, 0.73, 0.12, 0.26, c.patchB, -0.3, 0.12, 3.4);
+    lump(h, 0.75, 0.55, 0.24, 0.36, c.patchB, 0, 0.1, 5.1);
+    lump(h, 0.5, 0.97, 0.62, 0.22, c.patchB, 0, 0.05, 4.4); lump(h, 0.06, 0.93, 0.3, 0.26, c.patchA, 0, 0.12, 0.3);
+    lump(h, 0.97, 0.48, 0.11, 0.2, c.patchA, 0, 0.12, 2.6);
   }
   if (c.mask) {
     const rgb = [1, 3, 5].map(i => parseInt(c.mask.slice(i, i + 2), 16)).join(',');
@@ -439,7 +554,7 @@ $('btnCopy').onclick = () => { const out = $('shapeOut'), note = $('copied'); ou
 const RISE = 30, FALL = 46, STRIKE = RISE + FALL;
 const S = { last: performance.now(), lastKey: -1e9, lastMouse: -1e9, lastInput: performance.now(), sleepAt: 0, down: new Map(), thump: 0, thumpSide: 0, jolt: -1e9, rate: 0,
   turn: 0, nod: 0, tilt: 0, lid: 0, blinkAt: performance.now() + 2500, blinkUntil: 0, happyUntil: 0, bounceAt: -1e9, act: null, actUntil: 0, nextAct: performance.now() + 6000, loaf: 0, curl: 0,
-  gazeX: 0, gazeY: 0, pointer: null, phase: 0, lastSide: 'L', alt: 'L', spin: 0, spinning: false, mouseDown: false, wigX: 0, wigZ: 0, lidDir: 1, mouseLean: 0, sx: 0, fwd: 0, fwdGoal: 0, demoMouse: 0, wheelAt: -1e9, wheelDir: 1, chips: [] };
+  gazeX: 0, gazeY: 0, pointer: null, phase: 0, lastSide: 'L', lastGazeOffset: 0, alt: 'L', spin: 0, spinning: false, mouseDown: false, wigX: 0, wigZ: 0, lidDir: 1, mouseLean: 0, sx: 0, fwd: 0, fwdGoal: 0, demoMouse: 0, wheelAt: -1e9, wheelDir: 1, chips: [] };
 const sleeping = t => S.sleepAt && t > S.sleepAt;
 if (VIEW.get('eyes') === 'shut') { S.blinkUntil = 1e13; S.blinkAt = 1e14; } if (VIEW.get('eyes') === 'happy') S.happyUntil = 1e13; if (VIEW.get('coat')) setTimeout(() => setCoat(+VIEW.get('coat')), 0); if (VIEW.get('wall')) setTimeout(() => setWall(+VIEW.get('wall')), 0);   // preview switches
 let SLEEP_AFTER = VIEW.get('sleep') ? +VIEW.get('sleep') * 1000 : (options.sleepMinutes || 5) * 60000;              // falls asleep by itself after this long without keys or mouse
@@ -462,6 +577,9 @@ function keyDown(code, t = performance.now()) {
   const k = keys.get(code); let side, x, z;
   side = code === 'Space' && t - S.lastMouse < 1600 ? (MOUSE_PAW === 'L' ? 'R' : 'L') : pawFor(code);
   if (k) { x = k.x; z = k.z; if (code === 'Space') x += (side === 'L' ? -1 : 1) * 0.3; } else { x = (side === 'L' ? -1 : 1) * 0.8; z = KB.z0 + 0.55; }
+  // Remember the pressed key's own horizontal offset from the keyboard centre (k.ox, 0 = middle),
+  // so the eyes look at the key itself - not at the paw and not at the shifted Space tap.
+  S.lastGazeOffset = k ? k.ox : ((side === 'L' ? -1 : 1) * 0.8 - activeLayout.baseCenterX * DESK_DIR);
   S.down.set(code, side); strike(side, x, z, t, k); paws[side].held = 1;
 }
 function keyUp(code) {
@@ -491,9 +609,14 @@ const hitExpand = objs => { hitBox.makeEmpty(); for (const o of objs) hitBox.exp
 let demo = false;
 const stopDemo = () => { if (!demo) return; demo = false; $('btnDemo').textContent = '播放演示'; hintEl.textContent = '正在跟随你的键盘'; [...S.down.keys()].forEach(keyUp); };
 let lastPointer = null;
+// [7paws] Screen Y grows downward; moving toward the keyboard's top rows increases world Z.
+const nudgeMouse = (dx, dy) => {
+  S.wigX = clamp(S.wigX + dx, -0.16, 0.16);
+  S.wigZ = clamp(S.wigZ - dy, -0.12, 0.12);
+};
 on('pointermove', e => { const r = stageEl.getBoundingClientRect(); S.pointer = { x: (e.clientX - r.left) / r.width * 2 - 1, y: (e.clientY - r.top) / r.height * 2 - 1 };
   if (e.pointerType === 'touch') return;
-  if (lastPointer) { const dx = e.clientX - lastPointer.x, dy = e.clientY - lastPointer.y; if (Math.abs(dx) + Math.abs(dy) > 2) { const t = performance.now(); wake(t); S.lastMouse = t; S.wigX = clamp(S.wigX + dx * 0.004, -0.16, 0.16); S.wigZ = clamp(S.wigZ + dy * 0.004, -0.12, 0.12); } }
+  if (lastPointer) { const dx = e.clientX - lastPointer.x, dy = e.clientY - lastPointer.y; if (Math.abs(dx) + Math.abs(dy) > 2) { const t = performance.now(); wake(t); S.lastMouse = t; nudgeMouse(dx * 0.004, dy * 0.004); } }
   lastPointer = { x: e.clientX, y: e.clientY }; });
 // Only a press on the head is a pet: the eyes arch shut and the head leans into the hand for as long as it is held.
 const petRay = new THREE.Raycaster(), petAt = new THREE.Vector2();
@@ -591,10 +714,14 @@ function frame() {
   if (calm && idleActions && !reduceMotion && t > S.nextAct) { const pool = ['lookL', 'lookR', 'tilt', 'ear', 'ear', 'lick', 'lick', 'groom', 'groom', 'loaf', 'curl', 'stretch', 'yawn', 'tail']; S.act = pool[Math.floor(Math.random() * pool.length)]; S.actUntil = t + ({ ear: 420, lick: 3200, groom: 4600, loaf: 5200, curl: 5600 }[S.act] || 1700); S.nextAct = t + rnd(7000, 15000); }
   if (S.act && (t > S.actUntil || !calm)) S.act = null;
   const looking = typing && t - S.lastKey < 1000;
+  // Look toward the key that was actually pressed, judged by its position on the keyboard
+  // (k.ox: negative = left half, 0 = centre, positive = right half). The Space bar is centred,
+  // so it now looks straight ahead instead of being treated as the left hand and glancing left.
+  const look = looking ? clamp((S.lastGazeOffset || 0) / (activeLayout.totalUnits * KB.unit / 2), -1, 1) : 0;
   // While the real cursor is moving, the cat watches the cursor itself: direction is measured from the head's place on screen.
   const follow = mousing && S.pointer && !(demo && t < S.demoMouse); let pdx = 0, pdy = 0;
   if (follow) { proj.setFromMatrixPosition(head.matrixWorld).project(camera); pdx = S.pointer.x - proj.x; pdy = S.pointer.y + proj.y; }
-  const turnT = asleep ? 0 : follow ? clamp(pdx * 0.5, -0.4, 0.4) : mousing ? -0.36 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.3 : 0.3) : grooming ? 0.48 + Math.sin(t / 180) * 0.05 : curling ? -0.14 : loafing ? 0.1 : S.act === 'lookL' ? -0.45 : S.act === 'lookR' ? 0.45 : S.pointer && !typing ? clamp(S.pointer.x, -1, 1) * 0.22 : 0;
+  const turnT = asleep ? 0 : follow ? clamp(pdx * 0.5, -0.4, 0.4) : mousing ? -0.36 * DESK_DIR : looking ? look * 0.3 : grooming ? 0.48 + Math.sin(t / 180) * 0.05 : curling ? -0.14 : loafing ? 0.1 : S.act === 'lookL' ? -0.45 : S.act === 'lookR' ? 0.45 : S.pointer && !typing ? clamp(S.pointer.x, -1, 1) * 0.22 : 0;
   const nodT = asleep ? 0.5 : yawning ? -0.3 * yawn : crouch ? 0.16 : happy ? -0.12 : grooming ? 0.3 + Math.sin(t / 150) * 0.08 : curling ? 0.2 : loafing ? 0.1 : licking ? 0.34 + Math.sin(t / 140) * 0.09 : stretching ? -0.18 : looking ? 0.3 : follow ? clamp(pdy * 0.5, -0.28, 0.4) : mousing ? 0.22 : S.pointer && !typing ? clamp(S.pointer.y * 0.2, -0.16, 0.2) : 0;
   const tiltT = asleep ? 0.16 : grooming ? -0.28 : curling ? 0.1 : licking ? -0.12 : S.act === 'tilt' ? 0.2 : happy ? (S.petSide || -1) * 0.1 + Math.sin(t / 330) * 0.06 : 0;
   S.turn += (turnT - S.turn) * ease(7); S.nod += (nodT - S.nod) * ease(6); S.tilt += (tiltT - S.tilt) * ease(5);
@@ -611,7 +738,7 @@ function frame() {
   if (t > S.blinkAt) { S.blinkUntil = t + 130; S.blinkAt = t + rnd(2600, 5600); }
   S.lidDir = 1;                      // happy: lower lid rises into an arch; blink and sleep: upper lid comes down
   const lidT = asleep || t < S.blinkUntil || happy || grooming ? 1 : curling ? 0.32 : loafing ? 0.22 : licking || stretching || yawn > 0.25 ? 1 : 0; S.lid += (lidT - S.lid) * (1 - Math.exp(-realDt * (lidT > S.lid ? 34 : 16)));   // eyelids keep real time even if frames are dropped
-  const gx = follow ? clamp(pdx * 2.2, -1, 1) : mousing ? -0.8 * DESK_DIR : looking ? (S.lastSide === 'L' ? -0.5 : 0.5) : S.pointer ? clamp(S.pointer.x * 1.2, -1, 1) : 0, gy = follow ? clamp(pdy * 2.2, -1, 1) : looking || mousing ? 1 : S.pointer ? clamp(S.pointer.y * 1.3, -1, 1) : 0;
+  const gx = follow ? clamp(pdx * 2.2, -1, 1) : mousing ? -0.8 * DESK_DIR : looking ? look * 0.5 : S.pointer ? clamp(S.pointer.x * 1.2, -1, 1) : 0, gy = follow ? clamp(pdy * 2.2, -1, 1) : looking || mousing ? 1 : S.pointer ? clamp(S.pointer.y * 1.3, -1, 1) : 0;
   S.gazeX += (gx - S.gazeX) * ease(9); S.gazeY += (gy - S.gazeY) * ease(9);
   const widen = (looking ? 1.25 : pouncing ? 1.9 : 1) * (1 - 0.3 * fast);
   const ex = 0.37 * P.eyeSpread, ey = P.eyeY, er = 0.205 * P.eyeSize, iry = er * 0.74, c = S.lid, dir = S.lidDir || 1;
@@ -788,10 +915,7 @@ return {
     wake(t);
     S.lastMouse = t;
   },
-  nudgeMouse(dx, dy) {
-    S.wigX = clamp(S.wigX + dx, -0.16, 0.16);
-    S.wigZ = clamp(S.wigZ + dy, -0.12, 0.12);
-  },
+  nudgeMouse,
   setInput(keySet, buttonSet) {
     for (const code of shownKeys) if (!keySet.has(code)) { keyUp(code); downAt.delete(code); }
     for (const code of keySet) if (!shownKeys.has(code)) { keyDown(code); downAt.set(code, performance.now()); }

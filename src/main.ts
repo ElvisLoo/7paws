@@ -6,6 +6,7 @@ import { SevenPawsPet } from "./pet/sevenPaws.ts";
 import { COATS } from "./pet/coats";
 import { ReminderController } from "./reminder.ts";
 import { defaultSettings } from "./defaults";
+import { CAPTURE_BACKGROUNDS } from "./captureBackgrounds";
 import type { AppSettings, CatInput, CustomCat, TypingStats } from "./types";
 
 const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window;
@@ -23,7 +24,11 @@ let composeBubble: HTMLDivElement | null = null;
 let composeText = "";
 let composeHideTimer: number | null = null;
 let typingStats: TypingStats | null = null;
-const reminder = new ReminderController();
+const reminder = new ReminderController((text) => {
+  if (isTauri && settings.reminderTextEnabled) {
+    void invoke("show_reminder_bubble", { text }).catch(() => undefined);
+  }
+});
 let lastReminderKey = "";
 
 function setStatusLabel(label: string | null) {
@@ -76,6 +81,18 @@ function syncReminder() {
   if (key === lastReminderKey) return;
   lastReminderKey = key;
   reminder.configure(settings.reminderEnabled, settings.reminderText, settings.reminderIntervalMinutes);
+}
+
+function sceneSettings(): AppSettings {
+  // Chroma key needs an opaque scene; the user's opacity applies only to normal desktop use.
+  return settings.streamGreenScreen ? { ...settings, opacity: 1 } : settings;
+}
+
+function applyStreamBackdrop() {
+  const background = CAPTURE_BACKGROUNDS.find((c) => c.value === settings.captureBackground)
+    ?? CAPTURE_BACKGROUNDS[0];
+  document.documentElement.style.setProperty("--capture-background", background.color);
+  document.body.classList.toggle("stream-green-screen", settings.streamGreenScreen);
 }
 
 function bindPointer() {
@@ -177,6 +194,7 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   const debugCoat = params.get("previewCoat");
   if (debugCoat && COATS.some((c) => c.id === debugCoat)) settings.coat = debugCoat;
+  applyStreamBackdrop();
 
   try {
     if (!win7Mode) {
@@ -198,9 +216,9 @@ async function boot() {
       composeBubble.hidden = true;
       stage.appendChild(composeBubble);
     }
-    scene = new SevenPawsPet(stage, settings, customCats, (regions) => {
+    scene = new SevenPawsPet(stage, sceneSettings(), customCats, (regions) => {
       if (isTauri) void invoke("set_hit_regions", { regions });
-    }, win7Mode, (label) => setStatusLabel(label));
+    }, win7Mode, (label) => setStatusLabel(label), true);
   } catch (error) {
     if (isTauri) {
       void invoke("win7_debug_log", { message: `scene:init ${String(error)}` }).catch(() => undefined);
@@ -247,7 +265,8 @@ async function boot() {
     }
     await listen<AppSettings>("cat-settings", (ev) => {
       settings = ev.payload;
-      scene.applySettings(settings, customCats);
+      applyStreamBackdrop();
+      scene.applySettings(sceneSettings(), customCats);
       syncReminder();
       syncTypingBadge();
       if (!settings.composeTrackingEnabled || settings.privacyMode) hideComposed();
@@ -264,7 +283,7 @@ async function boot() {
     });
     await listen<CustomCat[]>("cat-cats", (ev) => {
       customCats = ev.payload;
-      scene.applySettings(settings, customCats);
+      scene.applySettings(sceneSettings(), customCats);
     });
     await listen<{ trusted: boolean }>("cat-input-status", (ev) => {
       permNotice.classList.toggle("hidden", ev.payload.trusted);
@@ -273,6 +292,9 @@ async function boot() {
 
   window.addEventListener("resize", () => {
     scene.refreshHitRegions();
+  });
+  window.addEventListener("pagehide", (event) => {
+    if (!event.persisted) scene.destroy();
   });
 
   if (params.get("demo") === "1") runDemo();

@@ -1,6 +1,8 @@
 export class ReminderController {
   private timer: number | null = null;
 
+  constructor(private readonly onFire?: (text: string) => void) {}
+
   configure(enabled: boolean, text: string, intervalMinutes: number): void {
     this.stop();
     if (!enabled) return;
@@ -10,7 +12,10 @@ export class ReminderController {
     const schedule = () => {
       this.timer = window.setTimeout(() => {
         try {
-          this.speak(trimmed);
+          if (trimmed) {
+            this.onFire?.(trimmed);
+            this.speak(trimmed);
+          }
         } finally {
           schedule();
         }

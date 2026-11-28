@@ -3070,11 +3070,12 @@ dependencies = [
 
 [[package]]
 name = "seven-paws"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "cc",
  "core-foundation",
  "core-graphics",
+ "objc2-app-kit",
  "oldwin",
  "oldwin-targets",
  "serde",

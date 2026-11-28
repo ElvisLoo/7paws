@@ -322,18 +322,18 @@ fn normalize_window_point(app: &AppHandle, x: i32, y: i32) -> (f64, f64) {
     (0.5, 0.5)
 }
 
-// The macOS tap carries no useful screen point (CGEvent locations are in
-// points, not physical pixels), so the emitter asks Tauri for the cursor.
+// Match the target window's pixel scale, including mixed-DPI macOS displays.
 #[cfg(target_os = "macos")]
 fn normalize_window_point(app: &AppHandle, _x: i32, _y: i32) -> (f64, f64) {
-    let Ok(cursor) = app.cursor_position() else {
-        return (0.5, 0.5);
-    };
     if let Some(win) = app.get_webview_window("main") {
-        if let (Ok(pos), Ok(size)) = (win.outer_position(), win.outer_size()) {
+        if let (Some((cx, cy)), Ok(pos), Ok(size)) = (
+            crate::cursor_pos_for(&win),
+            win.outer_position(),
+            win.outer_size(),
+        ) {
             let w = size.width.max(1) as f64;
             let h = size.height.max(1) as f64;
-            return ((cursor.x - pos.x as f64) / w, (cursor.y - pos.y as f64) / h);
+            return ((cx - pos.x as f64) / w, (cy - pos.y as f64) / h);
         }
     }
     (0.5, 0.5)

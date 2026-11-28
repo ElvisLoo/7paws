@@ -21,9 +21,12 @@ export const defaultSettings: AppSettings = {
   typingStatsEnabled: true,
   composeTrackingEnabled: true,
   keyboardLayout: "65",
+  captureBackground: "green",
+  streamGreenScreen: false,
   showTrayIcon: true,
   mcpEnabled: true,
   reminderEnabled: false,
+  reminderTextEnabled: true,
   reminderText: "",
   reminderIntervalMinutes: 30,
 };

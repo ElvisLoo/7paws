@@ -136,6 +136,22 @@
         </div>
 
         <div class="menu-section menu-toggles">
+          <div class="menu-label">直播采集</div>
+          <label class="toggle-row" for="streamGreenScreen" title="开启后小猫窗口铺满抠像背景，按 100% 不透明度输出，供 OBS 窗口捕获">
+            <span>直播绿幕</span>
+            <input id="streamGreenScreen" type="checkbox" />
+          </label>
+          <div class="custom-row">
+            <span class="menu-label">抠像背景</span>
+            <button id="captureBackgroundSelect" class="dropdown" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="直播抠像背景">
+              <span id="captureBackgroundDot" class="capture-dot" aria-hidden="true"></span>
+              <span class="dropdown-label">绿幕</span>
+              <span class="dropdown-caret">▾</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-section menu-toggles">
           <label class="toggle-row" for="leftMouse">
             <span>鼠标在左手边</span>
             <input id="leftMouse" type="checkbox" />
@@ -189,6 +205,10 @@
           <label class="toggle-row" for="reminderEnabled">
             <span>开启语音提醒</span>
             <input id="reminderEnabled" type="checkbox" />
+          </label>
+          <label class="toggle-row" for="reminderTextEnabled" title="提醒时在小猫上方弹出文字气泡">
+            <span>文字提醒</span>
+            <input id="reminderTextEnabled" type="checkbox" />
           </label>
           <div class="field">
             <label class="field-label" for="reminderText">提醒内容</label>

@@ -13,12 +13,14 @@ use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use windows_sys::Win32::Foundation::{CloseHandle, BOOL, HANDLE, HWND, LPARAM, RECT};
-use windows_sys::Win32::System::Threading::{OpenProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE};
 #[cfg(not(debug_assertions))]
 use windows_sys::Win32::System::Threading::GetCurrentProcess;
+use windows_sys::Win32::System::Threading::{
+    OpenProcess, WaitForSingleObject, PROCESS_SYNCHRONIZE,
+};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetClassNameW, GetForegroundWindow, GetWindowLongPtrW, GetWindowRect, IsIconic,
-    GWL_EXSTYLE, WS_EX_TOPMOST,
+    IsWindowVisible, ShowWindow, GWL_EXSTYLE, SW_SHOWNOACTIVATE, WS_EX_TOPMOST,
 };
 #[cfg(not(feature = "win7"))]
 use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -39,6 +41,32 @@ fn is_topmost(hwnd: HWND) -> bool {
 
 fn is_iconic(hwnd: HWND) -> bool {
     !hwnd.is_null() && unsafe { IsIconic(hwnd) != 0 }
+}
+
+fn restore_if_minimized(hwnd: HWND) -> bool {
+    if !is_iconic(hwnd) || unsafe { IsWindowVisible(hwnd) == 0 } {
+        return false;
+    }
+    unsafe {
+        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+    }
+    !is_iconic(hwnd)
+}
+
+fn restore_minimized_presenter(app: &AppHandle) {
+    let app = app.clone();
+    let _ = app.clone().run_on_main_thread(move || {
+        let Some(hwnd) = presenter_hwnd(&app) else {
+            return;
+        };
+        if restore_if_minimized(hwnd) {
+            #[cfg(not(feature = "win7"))]
+            if let Some(window) = app.get_webview_window("main") {
+                // Sync Tao's cached state after the native restore, without activating.
+                let _ = window.unminimize();
+            }
+        }
+    });
 }
 
 fn is_ignored_shell_window(hwnd: HWND) -> bool {
@@ -348,6 +376,24 @@ pub fn start_guard(app: AppHandle, settings: Arc<Mutex<AppSettings>>, dragging: 
         loop {
             thread::sleep(Duration::from_millis(150));
 
+            if !presenter_is_visible(&app) {
+                last_foreground = 0;
+                foreground_attempts = 0;
+                foreground_just_changed = true;
+                continue;
+            }
+            let Some(our_hwnd) = presenter_hwnd(&app) else {
+                foreground_just_changed = true;
+                continue;
+            };
+            // Restore accidental minimization even when the topmost guard is paused.
+            if is_iconic(our_hwnd) {
+                restore_minimized_presenter(&app);
+                last_foreground = 0;
+                foreground_attempts = 0;
+                foreground_just_changed = true;
+                continue;
+            }
             if dragging.load(Ordering::Relaxed) || settings_window_open(&app) {
                 last_foreground = 0;
                 foreground_attempts = 0;
@@ -358,17 +404,9 @@ pub fn start_guard(app: AppHandle, settings: Arc<Mutex<AppSettings>>, dragging: 
                 .lock()
                 .map(|settings| settings.always_on_top)
                 .unwrap_or(true);
-            if !always_on_top || !presenter_is_visible(&app) {
+            if !always_on_top {
                 last_foreground = 0;
                 foreground_attempts = 0;
-                foreground_just_changed = true;
-                continue;
-            }
-            let Some(our_hwnd) = presenter_hwnd(&app) else {
-                foreground_just_changed = true;
-                continue;
-            };
-            if is_iconic(our_hwnd) {
                 foreground_just_changed = true;
                 continue;
             }
@@ -424,14 +462,15 @@ pub fn start_guard(app: AppHandle, settings: Arc<Mutex<AppSettings>>, dragging: 
 
 #[cfg(all(test, windows))]
 mod tests {
-    use super::{is_topmost, window_is_above};
+    use super::{foreground_hwnd, is_iconic, is_topmost, restore_if_minimized, window_is_above};
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Foundation::HWND;
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        CreateWindowExW, DestroyWindow, SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE,
-        SWP_NOSIZE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+        CreateWindowExW, DestroyWindow, GetWindowRect, IsWindowVisible, SetWindowPos, ShowWindow,
+        HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_HIDE, SW_SHOWMINNOACTIVE,
+        SW_SHOWNOACTIVATE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
     };
 
     fn wide(value: &str) -> Vec<u16> {
@@ -489,6 +528,52 @@ mod tests {
             assert!(!window_is_above(foreground, model));
 
             DestroyWindow(foreground);
+            DestroyWindow(model);
+        }
+    }
+
+    #[test]
+    fn restores_minimized_window_without_activation_or_position_change() {
+        let model = create_window("7paws minimized model");
+        assert!(!model.is_null());
+        unsafe {
+            ShowWindow(model, SW_SHOWNOACTIVATE);
+            let mut before = std::mem::zeroed();
+            assert_ne!(GetWindowRect(model, &mut before), 0);
+            ShowWindow(model, SW_SHOWMINNOACTIVE);
+            assert!(is_iconic(model));
+            let foreground = foreground_hwnd();
+
+            assert!(restore_if_minimized(model));
+            assert!(!is_iconic(model));
+            assert_ne!(IsWindowVisible(model), 0);
+            assert_eq!(foreground_hwnd(), foreground);
+            let mut after = std::mem::zeroed();
+            assert_ne!(GetWindowRect(model, &mut after), 0);
+            assert_eq!(before.left, after.left);
+            assert_eq!(before.top, after.top);
+            assert_eq!(before.right, after.right);
+            assert_eq!(before.bottom, after.bottom);
+
+            DestroyWindow(model);
+        }
+    }
+
+    #[test]
+    fn leaves_hidden_minimized_window_hidden() {
+        assert!(!restore_if_minimized(std::ptr::null_mut()));
+        let model = create_window("7paws hidden model");
+        assert!(!model.is_null());
+        unsafe {
+            assert!(!restore_if_minimized(model));
+            ShowWindow(model, SW_SHOWMINNOACTIVE);
+            ShowWindow(model, SW_HIDE);
+            assert!(is_iconic(model));
+
+            assert!(!restore_if_minimized(model));
+            assert_eq!(IsWindowVisible(model), 0);
+            assert!(is_iconic(model));
+
             DestroyWindow(model);
         }
     }

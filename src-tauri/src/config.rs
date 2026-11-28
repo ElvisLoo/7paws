@@ -55,9 +55,12 @@ pub struct AppSettings {
     #[serde(default = "default_true")]
     pub compose_tracking_enabled: bool,
     pub keyboard_layout: String,
+    pub capture_background: String,
+    pub stream_green_screen: bool,
     pub show_tray_icon: bool,
     pub mcp_enabled: bool,
     pub reminder_enabled: bool,
+    pub reminder_text_enabled: bool,
     pub reminder_text: String,
     pub reminder_interval_minutes: u32,
 }
@@ -85,9 +88,12 @@ impl Default for AppSettings {
             typing_stats_enabled: true,
             compose_tracking_enabled: true,
             keyboard_layout: "65".to_string(),
+            capture_background: "green".to_string(),
+            stream_green_screen: false,
             show_tray_icon: true,
             mcp_enabled: true,
             reminder_enabled: false,
+            reminder_text_enabled: true,
             reminder_text: String::new(),
             reminder_interval_minutes: 30,
         }
@@ -117,8 +123,14 @@ impl AppSettings {
         if !COATS.contains(&self.coat.as_str()) && !is_slug(&self.coat) {
             self.coat = "tuxedo".to_string();
         }
-        if self.keyboard_layout != "104" {
+        if !matches!(self.keyboard_layout.as_str(), "104" | "98") {
             self.keyboard_layout = "65".to_string();
+        }
+        if !matches!(
+            self.capture_background.as_str(),
+            "green" | "blue" | "magenta"
+        ) {
+            self.capture_background = "green".to_string();
         }
     }
 }
@@ -450,4 +462,39 @@ pub fn set_autostart(enabled: bool) -> Result<(), String> {
 #[cfg(not(any(windows, target_os = "macos")))]
 pub fn set_autostart(_enabled: bool) -> Result<(), String> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppSettings;
+
+    #[test]
+    fn capture_background_defaults_without_resetting_existing_settings() {
+        let settings: AppSettings = serde_json::from_str(
+            r#"{"x":120,"y":240,"scale":0.8,"opacity":0.5,"keyboardLayout":"104","privacyMode":true}"#,
+        )
+        .unwrap();
+        assert_eq!(settings.capture_background, "green");
+        assert_eq!((settings.x, settings.y), (Some(120), Some(240)));
+        assert_eq!((settings.scale, settings.opacity), (0.8, 0.5));
+        assert_eq!(settings.keyboard_layout, "104");
+        assert!(settings.privacy_mode);
+    }
+
+    #[test]
+    fn capture_background_survives_round_trip_and_rejects_unknown_values() {
+        for color in ["green", "blue", "magenta", "unknown"] {
+            let mut settings = AppSettings {
+                capture_background: color.to_string(),
+                ..AppSettings::default()
+            };
+            settings.normalize();
+            let json = serde_json::to_string(&settings).unwrap();
+            let restored: AppSettings = serde_json::from_str(&json).unwrap();
+            assert_eq!(
+                restored.capture_background,
+                if color == "unknown" { "green" } else { color }
+            );
+        }
+    }
 }
