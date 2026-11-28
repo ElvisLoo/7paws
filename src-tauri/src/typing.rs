@@ -162,7 +162,7 @@ impl TypingStats {
     /// Counts wheel detents. Windows reports ±120 per notch, so anything less
     /// than a full detent still counts as one scroll step.
     pub fn record_wheel(&mut self, delta: i32) {
-        let notches = (delta.unsigned_abs() / 120).max(1);
+        let notches = ((delta.unsigned_abs() as u64) / 120).max(1);
         self.ensure_today();
         self.mouse_wheel += notches;
         self.today_mouse_wheel += notches;
